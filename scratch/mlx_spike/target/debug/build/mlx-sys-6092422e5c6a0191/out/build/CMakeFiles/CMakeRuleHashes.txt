@@ -1,4 +1,5 @@
 # Hashes of file build rules.
+12fce78dd7d5a1753157f3798ef12ea3 /Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib
 2493ea6ed8bd778d74d7f54fb0a79852 /opt/homebrew/lib/mlx.metallib
 87eaba8aa1b63bccd7beba88a1008f13 _deps/mlx-build/mlx/backend/cpu/CMakeFiles/cpu_compiled_preamble
 a5050f6eb98920eecde210c4c6d9913c _deps/mlx-build/mlx/backend/cpu/compiled_preamble.cpp

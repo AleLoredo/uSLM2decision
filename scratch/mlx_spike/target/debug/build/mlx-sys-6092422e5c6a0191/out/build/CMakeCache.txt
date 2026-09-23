@@ -478,7 +478,7 @@ MLX_METAL_DEBUG:BOOL=OFF
 MLX_METAL_JIT:BOOL=OFF
 
 //No help, variable specified on the command line.
-MLX_METAL_PATH:UNINITIALIZED=/opt/homebrew/lib
+MLX_METAL_PATH:UNINITIALIZED=/Users/alejandro/.mlx/lib/dd231f807774
 
 //Use CCache for compilation cache when available
 MLX_USE_CCACHE:BOOL=ON

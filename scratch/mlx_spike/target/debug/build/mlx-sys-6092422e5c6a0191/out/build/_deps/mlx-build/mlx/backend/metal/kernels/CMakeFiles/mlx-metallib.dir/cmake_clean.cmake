@@ -1,5 +1,5 @@
 file(REMOVE_RECURSE
-  "/opt/homebrew/lib/mlx.metallib"
+  "/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib"
   "CMakeFiles/mlx-metallib"
   "arange.air"
   "arg_reduce.air"
