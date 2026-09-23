@@ -1,0 +1,43 @@
+file(REMOVE_RECURSE
+  "/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib"
+  "CMakeFiles/mlx-metallib"
+  "arange.air"
+  "arg_reduce.air"
+  "binary.air"
+  "binary_two.air"
+  "conv.air"
+  "copy.air"
+  "dot.air"
+  "fft.air"
+  "fp_quantized.air"
+  "gemv.air"
+  "gemv_masked.air"
+  "layer_norm.air"
+  "logsumexp.air"
+  "quantized.air"
+  "random.air"
+  "reduce.air"
+  "rms_norm.air"
+  "rope.air"
+  "scaled_dot_product_attention.air"
+  "scan.air"
+  "searchsorted.air"
+  "softmax.air"
+  "sort.air"
+  "steel_attention.air"
+  "steel_conv.air"
+  "steel_conv_3d.air"
+  "steel_conv_general.air"
+  "steel_gemm_fused.air"
+  "steel_gemm_gather.air"
+  "steel_gemm_masked.air"
+  "steel_gemm_segmented.air"
+  "steel_gemm_splitk.air"
+  "ternary.air"
+  "unary.air"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang )
+  include(CMakeFiles/mlx-metallib.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

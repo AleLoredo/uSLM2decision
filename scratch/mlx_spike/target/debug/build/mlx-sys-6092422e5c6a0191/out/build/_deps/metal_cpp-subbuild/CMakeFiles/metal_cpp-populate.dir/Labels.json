@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/metal_cpp-subbuild/CMakeFiles/metal_cpp-populate"
+		},
+		{
+			"file" : "/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/metal_cpp-subbuild/CMakeFiles/metal_cpp-populate.rule"
+		},
+		{
+			"file" : "/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/metal_cpp-subbuild/CMakeFiles/metal_cpp-populate-complete.rule"
+		},
+		{
+			"file" : "/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/metal_cpp-subbuild/metal_cpp-populate-prefix/src/metal_cpp-populate-stamp/metal_cpp-populate-build.rule"
+		},
+		{
+			"file" : "/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/metal_cpp-subbuild/metal_cpp-populate-prefix/src/metal_cpp-populate-stamp/metal_cpp-populate-configure.rule"
+		},
+		{
+			"file" : "/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/metal_cpp-subbuild/metal_cpp-populate-prefix/src/metal_cpp-populate-stamp/metal_cpp-populate-download.rule"
+		},
+		{
+			"file" : "/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/metal_cpp-subbuild/metal_cpp-populate-prefix/src/metal_cpp-populate-stamp/metal_cpp-populate-install.rule"
+		},
+		{
+			"file" : "/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/metal_cpp-subbuild/metal_cpp-populate-prefix/src/metal_cpp-populate-stamp/metal_cpp-populate-mkdir.rule"
+		},
+		{
+			"file" : "/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/metal_cpp-subbuild/metal_cpp-populate-prefix/src/metal_cpp-populate-stamp/metal_cpp-populate-patch.rule"
+		},
+		{
+			"file" : "/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/metal_cpp-subbuild/metal_cpp-populate-prefix/src/metal_cpp-populate-stamp/metal_cpp-populate-test.rule"
+		},
+		{
+			"file" : "/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/metal_cpp-subbuild/metal_cpp-populate-prefix/src/metal_cpp-populate-stamp/metal_cpp-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"metal_cpp-populate"
+		],
+		"name" : "metal_cpp-populate"
+	}
+}

@@ -1,0 +1,23 @@
+{
+	"InstallScripts" : 
+	[
+		"/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/cmake_install.cmake",
+		"/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/mlx-build/cmake_install.cmake",
+		"/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/json-build/cmake_install.cmake",
+		"/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/mlx-build/mlx/cmake_install.cmake",
+		"/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/mlx-build/mlx/backend/common/cmake_install.cmake",
+		"/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/mlx-build/mlx/backend/cpu/cmake_install.cmake",
+		"/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/mlx-build/mlx/distributed/cmake_install.cmake",
+		"/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/mlx-build/mlx/distributed/mpi/cmake_install.cmake",
+		"/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/mlx-build/mlx/distributed/ring/cmake_install.cmake",
+		"/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/mlx-build/mlx/distributed/nccl/cmake_install.cmake",
+		"/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/mlx-build/mlx/distributed/jaccl/cmake_install.cmake",
+		"/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/mlx-build/mlx/io/cmake_install.cmake",
+		"/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/mlx-build/mlx/backend/metal/cmake_install.cmake",
+		"/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/mlx-build/mlx/backend/metal/kernels/cmake_install.cmake",
+		"/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/mlx-build/mlx/backend/gpu/cmake_install.cmake",
+		"/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/fmt-build/cmake_install.cmake",
+		"/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/examples/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

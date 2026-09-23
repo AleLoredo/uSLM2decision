@@ -1,0 +1,4 @@
+_deps/mlx-build/mlx/CMakeFiles/mlx_version.dir/version.cpp.o: \
+  /Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/mlx-src/mlx/version.cpp \
+  /Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/mlx-src/mlx/version.h \
+  /Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/mlx-src/mlx/api.h
