@@ -10,10 +10,8 @@ set(CMAKE_MAKEFILE_DEPENDS
   "CMakeFiles/4.4.3/CMakeSystem.cmake"
   "CMakeLists.txt"
   "metal_cpp-populate-prefix/tmp/metal_cpp-populate-mkdirs.cmake"
-  "/opt/homebrew/share/cmake/Modules/CMakeDetermineSystem.cmake"
   "/opt/homebrew/share/cmake/Modules/CMakeGenericSystem.cmake"
   "/opt/homebrew/share/cmake/Modules/CMakeInitializeConfigs.cmake"
-  "/opt/homebrew/share/cmake/Modules/CMakeSystem.cmake.in"
   "/opt/homebrew/share/cmake/Modules/CMakeSystemSpecificInformation.cmake"
   "/opt/homebrew/share/cmake/Modules/CMakeSystemSpecificInitialize.cmake"
   "/opt/homebrew/share/cmake/Modules/ExternalProject.cmake"
@@ -38,7 +36,6 @@ set(CMAKE_MAKEFILE_OUTPUTS
 
 # Byproducts of CMake generate step:
 set(CMAKE_MAKEFILE_PRODUCTS
-  "CMakeFiles/4.4.3/CMakeSystem.cmake"
   "metal_cpp-populate-prefix/tmp/metal_cpp-populate-mkdirs.cmake"
   "metal_cpp-populate-prefix/src/metal_cpp-populate-stamp/download-metal_cpp-populate.cmake"
   "metal_cpp-populate-prefix/src/metal_cpp-populate-stamp/verify-metal_cpp-populate.cmake"

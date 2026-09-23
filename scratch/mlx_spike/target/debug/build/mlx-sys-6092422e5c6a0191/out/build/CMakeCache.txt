@@ -46,8 +46,10 @@ CMAKE_BUILD_TYPE:STRING=Debug
 //Enable/Disable color output during build.
 CMAKE_COLOR_MAKEFILE:BOOL=ON
 
-//CXX compiler
-CMAKE_CXX_COMPILER:STRING=/usr/bin/c++
+//Full path to the compiler used for language <LANG>. Set by CMake
+// during compiler detection on the first configure; users may
+// override on the command line to select a specific toolchain.
+CMAKE_CXX_COMPILER:UNINITIALIZED=/usr/bin/c++
 
 //Flags used by the CXX compiler during all build types.
 CMAKE_CXX_FLAGS:STRING= -ffunction-sections -fdata-sections -fPIC --target=arm64-apple-macosx -mmacosx-version-min=14.4 -w
@@ -64,8 +66,10 @@ CMAKE_CXX_FLAGS_RELEASE:STRING=-O3 -DNDEBUG
 //Flags used by the CXX compiler during RELWITHDEBINFO builds.
 CMAKE_CXX_FLAGS_RELWITHDEBINFO:STRING=-O2 -g -DNDEBUG
 
-//C compiler
-CMAKE_C_COMPILER:STRING=/usr/bin/cc
+//Full path to the compiler used for language <LANG>. Set by CMake
+// during compiler detection on the first configure; users may
+// override on the command line to select a specific toolchain.
+CMAKE_C_COMPILER:UNINITIALIZED=/usr/bin/cc
 
 //Flags used by the C compiler during all build types.
 CMAKE_C_FLAGS:STRING= -ffunction-sections -fdata-sections -fPIC --target=arm64-apple-macosx -mmacosx-version-min=14.4 -w
@@ -474,7 +478,7 @@ MLX_METAL_DEBUG:BOOL=OFF
 MLX_METAL_JIT:BOOL=OFF
 
 //No help, variable specified on the command line.
-MLX_METAL_PATH:UNINITIALIZED=/Users/alejandro/.mlx/lib/dd231f807774
+MLX_METAL_PATH:UNINITIALIZED=/opt/homebrew/lib
 
 //Use CCache for compilation cache when available
 MLX_USE_CCACHE:BOOL=ON

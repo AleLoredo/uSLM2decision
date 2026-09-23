@@ -69,44 +69,44 @@ include _deps/mlx-build/mlx/backend/metal/kernels/CMakeFiles/mlx-metallib.dir/co
 # Include the progress variables for this target.
 include _deps/mlx-build/mlx/backend/metal/kernels/CMakeFiles/mlx-metallib.dir/progress.make
 
-_deps/mlx-build/mlx/backend/metal/kernels/CMakeFiles/mlx-metallib: /Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib
+_deps/mlx-build/mlx/backend/metal/kernels/CMakeFiles/mlx-metallib: /opt/homebrew/lib/mlx.metallib
 
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/steel_attention.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/gemv_masked.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/gemv.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/steel_gemm_segmented.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/steel_gemm_splitk.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/steel_gemm_masked.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/steel_gemm_gather.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/steel_gemm_fused.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/steel_conv_general.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/steel_conv_3d.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/steel_conv.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/unary.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/ternary.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/sort.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/searchsorted.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/logsumexp.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/softmax.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/scan.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/fp_quantized.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/quantized.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/reduce.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/fft.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/copy.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/binary_two.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/binary.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/arange.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/scaled_dot_product_attention.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/rope.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/rms_norm.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/random.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/layer_norm.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/dot.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/conv.air
-/Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/arg_reduce.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/steel_attention.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/gemv_masked.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/gemv.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/steel_gemm_segmented.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/steel_gemm_splitk.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/steel_gemm_masked.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/steel_gemm_gather.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/steel_gemm_fused.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/steel_conv_general.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/steel_conv_3d.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/steel_conv.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/unary.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/ternary.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/sort.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/searchsorted.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/logsumexp.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/softmax.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/scan.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/fp_quantized.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/quantized.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/reduce.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/fft.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/copy.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/binary_two.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/binary.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/arange.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/scaled_dot_product_attention.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/rope.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/rms_norm.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/random.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/layer_norm.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/dot.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/conv.air
+/opt/homebrew/lib/mlx.metallib: _deps/mlx-build/mlx/backend/metal/kernels/arg_reduce.air
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building mlx.metallib"
-	cd /Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/mlx-build/mlx/backend/metal/kernels && xcrun -sdk macosx metal -mmacosx-version-min=14.3 steel_attention.air gemv_masked.air gemv.air steel_gemm_segmented.air steel_gemm_splitk.air steel_gemm_masked.air steel_gemm_gather.air steel_gemm_fused.air steel_conv_general.air steel_conv_3d.air steel_conv.air unary.air ternary.air sort.air searchsorted.air logsumexp.air softmax.air scan.air fp_quantized.air quantized.air reduce.air fft.air copy.air binary_two.air binary.air arange.air scaled_dot_product_attention.air rope.air rms_norm.air random.air layer_norm.air dot.air conv.air arg_reduce.air -o /Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib
+	cd /Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/mlx-build/mlx/backend/metal/kernels && xcrun -sdk macosx metal -mmacosx-version-min=14.3 steel_attention.air gemv_masked.air gemv.air steel_gemm_segmented.air steel_gemm_splitk.air steel_gemm_masked.air steel_gemm_gather.air steel_gemm_fused.air steel_conv_general.air steel_conv_3d.air steel_conv.air unary.air ternary.air sort.air searchsorted.air logsumexp.air softmax.air scan.air fp_quantized.air quantized.air reduce.air fft.air copy.air binary_two.air binary.air arange.air scaled_dot_product_attention.air rope.air rms_norm.air random.air layer_norm.air dot.air conv.air arg_reduce.air -o /opt/homebrew/lib/mlx.metallib
 
 _deps/mlx-build/mlx/backend/metal/kernels/arange.air: /Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/mlx-src/mlx/backend/metal/kernels/arange.metal
 _deps/mlx-build/mlx/backend/metal/kernels/arange.air: /Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scratch/mlx_spike/target/debug/build/mlx-sys-6092422e5c6a0191/out/build/_deps/mlx-src/mlx/backend/metal/kernels/arange.h
@@ -821,7 +821,6 @@ _deps/mlx-build/mlx/backend/metal/kernels/unary.air: /Users/alejandro/Documents/
 _deps/mlx-build/mlx/backend/metal/kernels/CMakeFiles/mlx-metallib.dir/codegen:
 .PHONY : _deps/mlx-build/mlx/backend/metal/kernels/CMakeFiles/mlx-metallib.dir/codegen
 
-mlx-metallib: /Users/alejandro/.mlx/lib/dd231f807774/mlx.metallib
 mlx-metallib: _deps/mlx-build/mlx/backend/metal/kernels/CMakeFiles/mlx-metallib
 mlx-metallib: _deps/mlx-build/mlx/backend/metal/kernels/arange.air
 mlx-metallib: _deps/mlx-build/mlx/backend/metal/kernels/arg_reduce.air
@@ -857,6 +856,7 @@ mlx-metallib: _deps/mlx-build/mlx/backend/metal/kernels/steel_gemm_segmented.air
 mlx-metallib: _deps/mlx-build/mlx/backend/metal/kernels/steel_gemm_splitk.air
 mlx-metallib: _deps/mlx-build/mlx/backend/metal/kernels/ternary.air
 mlx-metallib: _deps/mlx-build/mlx/backend/metal/kernels/unary.air
+mlx-metallib: /opt/homebrew/lib/mlx.metallib
 mlx-metallib: _deps/mlx-build/mlx/backend/metal/kernels/CMakeFiles/mlx-metallib.dir/build.make
 .PHONY : mlx-metallib
 
