@@ -40,29 +40,43 @@ OpenJEV is an open-source inference engine designed to evaluate unstructured con
 
 ### Prerequisites
 
-- macOS (Apple Silicon M1/M2/M3/M4) or Linux
+- **macOS** (Apple Silicon M1/M2/M3/M4) or **Linux / Windows (WSL/Git Bash)**
 - Python 3.10+
-- PyTorch / MLX / FastAPI dependencies
+- Docker Engine / Docker Desktop *(optional, for containerized deployment on Linux/Windows)*
 
-### Installation
+### Automated Setup & Installation
+
+OpenJEV provides an automated cross-platform installation script ([`install.sh`](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/install.sh)) that inspects your host operating system and configures the optimal runtime environment:
+
+- **macOS (Apple Silicon):** Configures a native `.venv` with Apple Metal GPU acceleration (`mlx`).
+- **Linux / Windows:** Detects Docker and NVIDIA GPU drivers (`nvidia-container-toolkit`) to build a Docker container, or sets up a native `.venv` with PyTorch CUDA.
 
 ```bash
 # Clone the repository
 git clone https://github.com/AleLoredo/OpenJEV.git
 cd OpenJEV
 
-# Activate virtual environment
-source .venv/bin/activate
-
-# Run full test suite
-PYTHONPATH=. pytest tests/ -v
+# Run automated installer
+./install.sh
 ```
 
-### Running the Edge Server
+### Running the Server
+
+Use [`run.sh`](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/run.sh) to launch the server. It automatically detects whether to run via Docker container or native `.venv`:
 
 ```bash
-# Start edge server on port 8000
-PYTHONPATH=. python3 -m uvicorn server.edge_server:app --reload --port 8000
+# Start server on default port 8000
+./run.sh
+
+# Or customize host and port via environment variables
+PORT=9000 HOST=127.0.0.1 ./run.sh
+```
+
+### Running Tests
+
+```bash
+source .venv/bin/activate
+PYTHONPATH=. pytest tests/ -v
 ```
 
 ### Sample API Request
