@@ -1,5 +1,5 @@
 """
-OpenDecide Edge Serving Engine (MLX Backend)
+OpenJEV Edge Serving Engine (MLX Backend)
 Implements full API contract from SPEC.md §4 & IMPLEMENTATION.md §8:
 - POST /v1/decide
 - GET /healthz
@@ -15,13 +15,13 @@ from pydantic import BaseModel, Field
 from core.heads import BoolHead, ChoiceHead, ScoreHead
 from calibration.post_hoc import TemperatureScaler
 
-MODEL_VERSION = "opendecide-0.5b-v1"
+MODEL_VERSION = "openjev-0.5b-v1"
 CALIBRATION_VERSION = "calib-2026.09-v1"
 HIDDEN_DIM = 64
 IS_WARMED_UP = True
 
 app = FastAPI(
-    title="OpenDecide Inference Engine",
+    title="OpenJEV Inference Engine",
     version="2.0.0",
     description="Self-hosted non-autoregressive decision engine on Apple Silicon"
 )
@@ -137,13 +137,13 @@ def readyz():
 @app.get("/metrics")
 def metrics():
     prometheus_data = (
-        "# HELP opendecide_requests_total Total decision requests\n"
-        "# TYPE opendecide_requests_total counter\n"
-        "opendecide_requests_total 42\n"
-        "# HELP opendecide_latency_seconds Latency in seconds\n"
-        "# TYPE opendecide_latency_seconds summary\n"
-        "opendecide_latency_seconds{quantile=\"0.5\"} 0.095\n"
-        "opendecide_latency_seconds{quantile=\"0.99\"} 0.101\n"
+        "# HELP openjev_requests_total Total decision requests\n"
+        "# TYPE openjev_requests_total counter\n"
+        "openjev_requests_total 42\n"
+        "# HELP openjev_latency_seconds Latency in seconds\n"
+        "# TYPE openjev_latency_seconds summary\n"
+        "openjev_latency_seconds{quantile=\"0.5\"} 0.095\n"
+        "openjev_latency_seconds{quantile=\"0.99\"} 0.101\n"
     )
     return Response(content=prometheus_data, media_type="text/plain")
 

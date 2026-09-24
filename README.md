@@ -1,8 +1,8 @@
-# OpenDecide (OpenJEV)
+# OpenJEV
 
 > **Self-Hostable, Calibrated Non-Autoregressive Decision Engine**
 
-OpenDecide is an open-source inference engine designed to evaluate unstructured context against developer-defined discrete schemas in a **single non-autoregressive forward pass**, producing typed, well-calibrated decisions with explicit confidence bounds.
+OpenJEV is an open-source inference engine designed to evaluate unstructured context against developer-defined discrete schemas in a **single non-autoregressive forward pass**, producing typed, well-calibrated decisions with explicit confidence bounds.
 
 ---
 
@@ -92,7 +92,7 @@ curl -X POST http://localhost:8000/v1/decide \
 ```json
 {
   "spec_version": "2.0.0",
-  "model_version": "opendecide-0.5b-v1",
+  "model_version": "openjev-0.5b-v1",
   "calibration_version": "calib-focal-brier-v1",
   "latency_ms": 14.2,
   "usage": {

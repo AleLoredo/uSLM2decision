@@ -1,4 +1,4 @@
-# DATASET_CARD.md: Provenance & Licensing for OpenDecide Tuning Corpora
+# DATASET_CARD.md: Provenance & Licensing for OpenJEV Tuning Corpora
 
 - **Dataset Version:** 1.0.0
 - **Status:** Normative / Provenance Audited
@@ -8,7 +8,7 @@
 
 ## 1. Provenance Summary
 
-All training and evaluation datasets used in OpenDecide multi-task supervised tuning are sourced exclusively from open-license academic corpora or generated using rule-based/open-weight models. **No output from restricted commercial API endpoints (e.g. OpenAI, Anthropic) was used to generate synthetic training data.**
+All training and evaluation datasets used in OpenJEV multi-task supervised tuning are sourced exclusively from open-license academic corpora or generated using rule-based/open-weight models. **No output from restricted commercial API endpoints (e.g. OpenAI, Anthropic) was used to generate synthetic training data.**
 
 | Corpus Name | Primary Task Mapping | Original Source / Author | License Type | Commercial Use Allowed? |
 |---|---|---|---|---|
@@ -16,7 +16,7 @@ All training and evaluation datasets used in OpenDecide multi-task supervised tu
 | **SNLI** (Stanford NLI) | `bool` (entailment) | Bowman et al., Stanford (2015) | CC-BY 4.0 | Yes |
 | **ANLI** (Adversarial NLI) | `bool` boundary cases | Nie et al., UNC/Meta (2020) | CC-BY-NC 4.0 / Apache 2.0 | Research / Open Audit |
 | **CLINC150** | `choice` (intent routing) | Larson et al., UMich (2019) | CC-BY 4.0 | Yes |
-| **Rule-Based Synthetic** | `bool`, `choice`, `score` | OpenDecide Internal Generator | MIT / Apache 2.0 | Yes |
+| **Rule-Based Synthetic** | `bool`, `choice`, `score` | OpenJEV Internal Generator | MIT / Apache 2.0 | Yes |
 
 ---
 

@@ -1,5 +1,5 @@
 """
-OpenDecide Normative Evaluation Metrics
+OpenJEV Normative Evaluation Metrics
 Implements requirements from:
 - SPEC.md §8 (Calibration Reporting Requirements)
 - SPEC.md §5 (Abstention & AURC)

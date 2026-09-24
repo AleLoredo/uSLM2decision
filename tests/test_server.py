@@ -29,7 +29,7 @@ def test_readyz_endpoint():
 def test_metrics_endpoint():
     response = client.get("/metrics")
     assert response.status_code == 200
-    assert "opendecide_requests_total" in response.text
+    assert "openjev_requests_total" in response.text
 
 def test_decide_endpoint_valid_primitives():
     payload = {

@@ -1,5 +1,5 @@
 """
-OpenDecide Phase 0 Hardware Benchmark
+OpenJEV Phase 0 Hardware Benchmark
 Measures actual inference latency (p50, p90, p99), throughput, and memory footprint on Apple Silicon (M3).
 Covers:
 - Models: 0.5B (Fast tier, Qwen2.5-0.5B dims: d=896, L=24, H=14, kv_H=2)

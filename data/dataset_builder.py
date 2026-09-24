@@ -1,6 +1,6 @@
 """
-OpenDecide Multi-Task Dataset Builder
-Converts raw NLI, intent, and rating datasets into unified OpenDecide decision queries (bool, choice, score).
+OpenJEV Multi-Task Dataset Builder
+Converts raw NLI, intent, and rating datasets into unified OpenJEV decision queries (bool, choice, score).
 """
 
 from typing import Dict, List, Any, Tuple

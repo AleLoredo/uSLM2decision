@@ -16,7 +16,7 @@ As required by `ARCHITECTURE.md` §4.1, an empirical ablation study was conducte
 - **Pure Brier Score Regularization** operates as a proper scoring rule, significantly improving reliability (ECE down to 4.30%).
 - **Combined Focal Loss + Brier Regularization** (Recipe D) achieves the best overall performance with **ECE = 3.67%** and lowest reliability error (0.0065).
 
-**Locked Training Recipe for OpenDecide:**
+**Locked Training Recipe for OpenJEV:**
 The normative loss formulation for `bool` and `choice` heads combines Focal Loss ($\gamma = 1.0$) with Brier Score Regularization ($\lambda = 0.5$). `score` heads retain the ordinal Gaussian soft-smoothed loss ([`core/losses.py`](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/core/losses.py)).
 
 ---

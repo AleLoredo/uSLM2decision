@@ -1,5 +1,5 @@
 """
-OpenDecide Post-Hoc Calibration Engine (MLX Backend)
+OpenJEV Post-Hoc Calibration Engine (MLX Backend)
 Implements temperature scaling and vector scaling calibration for decision logits.
 Per SPEC.md §8 & ARCHITECTURE.md §4.
 """

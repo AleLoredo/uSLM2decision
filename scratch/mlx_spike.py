@@ -1,5 +1,5 @@
 """
-OpenDecide Phase 0 Spike: MLX Validation of Block-Causal Attention & Decision Heads
+OpenJEV Phase 0 Spike: MLX Validation of Block-Causal Attention & Decision Heads
 Validates:
 1. Block-causal attention masking ([ARCHITECTURE.md] §2)
 2. Per-segment position IDs resetting per query ([ARCHITECTURE.md] §2.1)
@@ -129,7 +129,7 @@ class DecisionHeads(nn.Module):
 
 def run_spike_tests():
     print("==========================================================")
-    print(" OpenDecide Phase 0 Spike: MLX Operational Validation")
+    print(" OpenJEV Phase 0 Spike: MLX Operational Validation")
     print(" Hardware: Apple Silicon (Metal GPU)")
     print("==========================================================")
     

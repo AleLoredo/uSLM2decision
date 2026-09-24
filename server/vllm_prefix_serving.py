@@ -1,5 +1,5 @@
 """
-OpenDecide Cloud / GPU Serving Profile (vLLM Prefix Caching Architecture)
+OpenJEV Cloud / GPU Serving Profile (vLLM Prefix Caching Architecture)
 Per ROADMAP.md Phase 5:
 Prefills state context S once into KV-cache, then evaluates K query suffixes in parallel.
 """
@@ -13,7 +13,7 @@ class VLLMPrefixServingEngine:
     1. Context prefill phase (populates KV cache for context S).
     2. Query suffix batching phase (evaluates K query suffixes against cached S).
     """
-    def __init__(self, model_name: str = "opendecide-1.5b-cloud"):
+    def __init__(self, model_name: str = "openjev-1.5b-cloud"):
         self.model_name = model_name
         self.kv_cache_state = None
 

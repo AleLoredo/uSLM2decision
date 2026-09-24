@@ -1,5 +1,5 @@
 """
-OpenDecide Focal vs. Brier Calibration Ablation Runner
+OpenJEV Focal vs. Brier Calibration Ablation Runner
 Executes empirical ablation study required by ARCHITECTURE.md §4.1:
 Evaluates Standard BCE, Focal Loss, Brier Regularization, and Combined Focal+Brier.
 Measures ECE, MCE, and Brier Score on synthetic calibration evaluation datasets.
@@ -17,7 +17,7 @@ from eval_harness.metrics import compute_ece, compute_brier_decomposition
 
 def run_focal_brier_ablation():
     print("==========================================================")
-    print(" OpenDecide Phase 3: Focal Loss vs. Brier Score Ablation")
+    print(" OpenJEV Phase 3: Focal Loss vs. Brier Score Ablation")
     print(" Requirements: ARCHITECTURE.md §4.1")
     print("==========================================================")
     

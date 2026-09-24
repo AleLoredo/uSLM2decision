@@ -1,5 +1,5 @@
 """
-OpenDecide Recalibration & OOD Evaluation Benchmark
+OpenJEV Recalibration & OOD Evaluation Benchmark
 Per SPEC.md §8: Reports ECE & Brier score per primitive for In-Domain and Out-Of-Distribution datasets
 before and after fast temperature recalibration.
 """
@@ -12,7 +12,7 @@ from eval_harness.metrics import compute_ece, compute_brier_decomposition
 
 def run_post_hoc_recalibration_evaluation():
     print("==========================================================")
-    print(" OpenDecide Phase 4: Post-Hoc Recalibration Benchmark")
+    print(" OpenJEV Phase 4: Post-Hoc Recalibration Benchmark")
     print(" Requirements: SPEC.md §8 & ROADMAP.md Phase 4")
     print("==========================================================")
     

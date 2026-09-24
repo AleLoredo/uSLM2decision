@@ -1,5 +1,5 @@
 """
-OpenDecide Core Decision Heads Module (MLX Backend)
+OpenJEV Core Decision Heads Module (MLX Backend)
 Implements typed heads per ARCHITECTURE.md §3 and SPEC.md §3:
 1. BoolHead: P(true) = sigmoid(W_bool * h_Q + b), confidence in [0.5, 1.0]
 2. ChoiceHead: Corrected formula z_i = (h_Q^T W_choice e_{C_i}) / sqrt(d)

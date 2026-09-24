@@ -1,5 +1,5 @@
 """
-OpenDecide Calibration Loss Shaping Module (MLX Backend)
+OpenJEV Calibration Loss Shaping Module (MLX Backend)
 Implements calibration-aware loss functions per ARCHITECTURE.md §4:
 1. Focal Loss (for hard boundary example focus)
 2. Brier Score Regularization (proper scoring rule)

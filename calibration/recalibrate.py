@@ -1,5 +1,5 @@
 """
-OpenDecide Self-Hosted Recalibration Recipe
+OpenJEV Self-Hosted Recalibration Recipe
 Per ROADMAP.md Phase 4:
 "Bring ~200 labeled examples from your domain, refit temperature in under a minute."
 """

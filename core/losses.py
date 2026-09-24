@@ -1,5 +1,5 @@
 """
-OpenDecide Ordinal & Calibrated Loss Functions (MLX Backend)
+OpenJEV Ordinal & Calibrated Loss Functions (MLX Backend)
 Implements training loss functions for typed decision heads per ARCHITECTURE.md §3 & §4:
 1. bool_calibrated_loss: BCE + confidence calibration penalty
 2. choice_cross_entropy_loss: Cross-entropy over choice option distributions
