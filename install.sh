@@ -80,7 +80,7 @@ configure_openjev_wizard() {
       mkdir -p "$target_dir"
       echo ""
       echo "-> Descargando '$repo_id' desde Hugging Face hacia $target_dir..."
-      huggingface-cli download "$repo_id" --local-dir "$target_dir"
+      python3 -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='$repo_id', local_dir='$target_dir')"
 
       echo "-> Inicializando cabezales canónicos heads.safetensors en $target_dir..."
       python3 -m core.model_scanner --model-dir "$target_dir" --init-heads
