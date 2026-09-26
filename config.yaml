@@ -1,4 +1,11 @@
+# OpenJEV General Configuration
+# Archivo central de configuración del motor de decisiones
+
+# Modo de ejecución:
+# - "mock": Inferencia simulada para pruebas unitarias y CI ultrarrápidas (sin carga de pesos).
+# - "real": Inferencia no autorregresiva real sobre Metal GPU / PyTorch con backbone y cabezales.
 mode: real
+
 model:
   base_dir: ./models
   active_model: qwen2.5-0.5b
@@ -7,6 +14,34 @@ model:
   calibration_path: ./models/qwen2.5-0.5b/calibration.json
   backend: mlx
   device: auto
+
 server:
   host: 0.0.0.0
   port: 8000
+  
+  # Seguridad y Control de Acceso (IMPLEMENTATION.md §8)
+  auth:
+    enabled: false
+    api_keys:
+      - env:OPENJEV_API_KEY
+      - jev-local-dev-key
+
+  # Limitación de Tasa Standalone para despliegues sin API Gateway (IMPLEMENTATION.md §8.1)
+  rate_limit:
+    enabled: false
+    max_burst: 50
+    requests_per_second: 20
+
+  # Control de Admisión de Hardware y Load Shedding (IMPLEMENTATION.md §8.1)
+  admission:
+    max_queue_depth: 2048
+    max_active_tokens: 16384
+    retry_after_seconds: 2
+
+  # Dynamic Micro-Batching y Despachador Metal GPU (IMPLEMENTATION.md §4)
+  batching:
+    enabled: true
+    max_batch_size: 16
+    max_wait_ms: 8
+    max_queue_depth: 2048
+

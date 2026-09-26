@@ -1,6 +1,7 @@
 """
 OpenJEV Configuration Management Module
 Implements centralized, validated configuration via config.yaml using Pydantic.
+Includes Server Security, Hardware Admission Control, and Rate Limiting configurations.
 """
 
 import os
@@ -28,9 +29,46 @@ class ModelConfig(BaseModel):
             self.heads_path = os.path.join(self.backbone_path, "heads.safetensors")
         return self
 
+class AuthConfig(BaseModel):
+    enabled: bool = False
+    api_keys: List[str] = Field(default_factory=lambda: ["env:OPENJEV_API_KEY", "jev-local-dev-key"])
+
+    def get_resolved_keys(self) -> List[str]:
+        """Resolves API keys, parsing env:VAR_NAME from environment variables."""
+        keys = []
+        for k in self.api_keys:
+            if k.startswith("env:"):
+                var_name = k[4:]
+                val = os.getenv(var_name)
+                if val:
+                    keys.append(val)
+            else:
+                keys.append(k)
+        return keys
+
+class RateLimitConfig(BaseModel):
+    enabled: bool = False
+    max_burst: int = 50
+    requests_per_second: float = 20.0
+
+class AdmissionConfig(BaseModel):
+    max_queue_depth: int = 2048
+    max_active_tokens: int = 16384
+    retry_after_seconds: int = 2
+
+class BatchingConfig(BaseModel):
+    enabled: bool = True
+    max_batch_size: int = 16
+    max_wait_ms: int = 8
+    max_queue_depth: int = 2048
+
 class ServerConfig(BaseModel):
     host: str = "0.0.0.0"
     port: int = 8000
+    auth: AuthConfig = Field(default_factory=AuthConfig)
+    rate_limit: RateLimitConfig = Field(default_factory=RateLimitConfig)
+    admission: AdmissionConfig = Field(default_factory=AdmissionConfig)
+    batching: BatchingConfig = Field(default_factory=BatchingConfig)
 
 class OpenJEVConfig(BaseModel):
     mode: Literal["mock", "real"] = "mock"
@@ -72,6 +110,8 @@ if __name__ == "__main__":
     parser.add_argument("--set-model", help="Set active model name")
     parser.add_argument("--set-backbone", help="Set backbone path")
     parser.add_argument("--set-heads", help="Set heads path")
+    parser.add_argument("--enable-auth", action="store_true", help="Enable bearer token authentication")
+    parser.add_argument("--disable-auth", action="store_true", help="Disable bearer token authentication")
     parser.add_argument("--config-file", default=DEFAULT_CONFIG_PATH)
 
     args = parser.parse_args()
@@ -85,6 +125,10 @@ if __name__ == "__main__":
         cfg.model.backbone_path = args.set_backbone
     if args.set_heads:
         cfg.model.heads_path = args.set_heads
+    if args.enable_auth:
+        cfg.server.auth.enabled = True
+    if args.disable_auth:
+        cfg.server.auth.enabled = False
 
     save_config(cfg, args.config_file)
     print(f"[OpenJEV Config] Saved configuration to {args.config_file} (mode='{cfg.mode}', model='{cfg.model.active_model}')")

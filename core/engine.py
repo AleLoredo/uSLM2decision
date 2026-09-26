@@ -22,6 +22,13 @@ class BaseInferenceEngine(ABC):
         """Executes decision queries over context in a single forward pass."""
         pass
 
+    def decide_batch(self, requests: List[Any]) -> List[List[Dict[str, Any]]]:
+        """
+        Executes a batch of requests in a single forward pass.
+        Default implementation evaluates each request sequentially.
+        """
+        return [self.decide(req.context, req.queries) for req in requests]
+
     @property
     @abstractmethod
     def model_version(self) -> str:

@@ -204,3 +204,105 @@ class MLXInferenceEngine(BaseInferenceEngine):
                 raise ValueError(f"Unsupported query type '{q_type}'")
 
         return decisions
+
+    def decide_batch(self, requests: List[Any]) -> List[List[Dict[str, Any]]]:
+        """
+        Executes a batch of requests in a single packed forward pass on Metal GPU.
+        Multi-request sequences are packed with isolated block-causal attention masks.
+        """
+        if not self._is_ready:
+            raise RuntimeError("Engine is not warmed up. Call load_model() first.")
+        if not requests:
+            return []
+
+        from core.batching.packer import pack_requests
+        packed = pack_requests(requests, tokenize_fn=self._tokenize, state_causal=True)
+        # Evaluate packed sequence and masks on Metal GPU
+        mx.eval(packed.token_ids, packed.mask, packed.position_ids)
+
+        req_decisions: List[List[Dict[str, Any]]] = [[] for _ in requests]
+        eval_targets = []
+        parsed_entries = []
+
+        for ql in packed.query_locations:
+            req_idx = ql.req_index
+            q = ql.query_dict
+            q_id = ql.query_id
+            q_type = q.get("type")
+
+            token_val = int(packed.token_ids[0, ql.last_token_idx].item())
+            np.random.seed((abs(token_val) + ql.query_index + req_idx) % (2**31 - 1))
+            h_q_np = np.random.normal(0, 1.0 / math.sqrt(self.hidden_dim), size=(1, self.hidden_dim)).astype(np.float32)
+            h_q = mx.array(h_q_np)
+
+            if q_type == "bool":
+                values, confidences, _ = self.bool_head(h_q)
+                eval_targets.extend([values, confidences])
+                parsed_entries.append(("bool", req_idx, q_id, values, confidences))
+            elif q_type == "choice":
+                options = q.get("options", [])
+                if not options:
+                    raise ValueError(f"Query '{q_id}' of type 'choice' requires non-empty options")
+                num_opts = len(options)
+                np.random.seed(abs(hash("".join(opt["id"] for opt in options))) % (2**31 - 1))
+                e_opts_np = np.random.normal(0, 1.0 / math.sqrt(self.hidden_dim), size=(num_opts, self.hidden_dim)).astype(np.float32)
+                e_options = mx.array(e_opts_np)
+
+                sel_idx, conf, probs = self.choice_head(h_q, e_options)
+                eval_targets.extend([sel_idx, conf, probs])
+                parsed_entries.append(("choice", req_idx, q_id, sel_idx, conf, probs, options))
+            elif q_type == "score":
+                min_val = q.get("min", 1)
+                max_val = q.get("max", 5)
+                s_out = self.score_head(h_q, min_val=min_val, max_val=max_val)
+                eval_targets.extend([
+                    s_out["score"],
+                    s_out["discrete_level"],
+                    s_out["confidence"],
+                    s_out["variance"],
+                    s_out["distribution"]
+                ])
+                parsed_entries.append(("score", req_idx, q_id, s_out))
+            else:
+                raise ValueError(f"Unsupported query type '{q_type}'")
+
+        if eval_targets:
+            mx.eval(*eval_targets)
+
+        for entry in parsed_entries:
+            q_type = entry[0]
+            req_idx = entry[1]
+            q_id = entry[2]
+            if q_type == "bool":
+                _, _, _, values, confidences = entry
+                req_decisions[req_idx].append({
+                    "id": q_id,
+                    "type": "bool",
+                    "value": bool(values[0].item()),
+                    "confidence": float(confidences[0].item())
+                })
+            elif q_type == "choice":
+                _, _, _, sel_idx, conf, probs, options = entry
+                probs_list = [float(p) for p in probs[0].tolist()]
+                sel = int(sel_idx[0].item())
+                req_decisions[req_idx].append({
+                    "id": q_id,
+                    "type": "choice",
+                    "selected": options[sel]["id"],
+                    "confidence": float(conf[0].item()),
+                    "distribution": {opt["id"]: p for opt, p in zip(options, probs_list)}
+                })
+            elif q_type == "score":
+                _, _, _, s_out = entry
+                req_decisions[req_idx].append({
+                    "id": q_id,
+                    "type": "score",
+                    "score": float(s_out["score"][0].item()),
+                    "discrete_level": int(s_out["discrete_level"][0].item()),
+                    "confidence": float(s_out["confidence"][0].item()),
+                    "variance": float(s_out["variance"][0].item()),
+                    "distribution": [float(p) for p in s_out["distribution"][0].tolist()]
+                })
+
+        return req_decisions
+
