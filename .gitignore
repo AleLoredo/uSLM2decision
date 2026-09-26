@@ -1,0 +1,7 @@
+target/
+.venv/
+.pytest_cache/
+__pycache__/
+*.pyc
+.DS_Store
+scratch/mlx_spike/target/
