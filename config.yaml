@@ -1,0 +1,12 @@
+mode: real
+model:
+  base_dir: ./models
+  active_model: qwen2.5-0.5b
+  backbone_path: ./models/qwen2.5-0.5b
+  heads_path: ./models/qwen2.5-0.5b/heads.safetensors
+  calibration_path: ./models/qwen2.5-0.5b/calibration.json
+  backend: mlx
+  device: auto
+server:
+  host: 0.0.0.0
+  port: 8000

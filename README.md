@@ -46,19 +46,41 @@ OpenJEV is an open-source inference engine designed to evaluate unstructured con
 
 ### Automated Setup & Installation
 
-OpenJEV provides an automated cross-platform installation script ([`install.sh`](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/install.sh)) that inspects your host operating system and configures the optimal runtime environment:
+OpenJEV provides an automated cross-platform installation script ([`install.sh`](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/install.sh)) that inspects your host operating system, configures the optimal runtime environment, and sets up your model configuration:
 
 - **macOS (Apple Silicon):** Configures a native `.venv` with Apple Metal GPU acceleration (`mlx`).
 - **Linux / Windows:** Detects Docker and NVIDIA GPU drivers (`nvidia-container-toolkit`) to build a Docker container, or sets up a native `.venv` with PyTorch CUDA.
+- **Interactive Configuration:** Lets you select between `mock` mode (fast integration testing without weight downloads) and `real` mode (with auto-download of Qwen2.5-0.5B or custom local models in `./models`).
 
 ```bash
 # Clone the repository
 git clone https://github.com/AleLoredo/OpenJEV.git
 cd OpenJEV
 
-# Run automated installer
+# Run automated installer & interactive setup
 ./install.sh
 ```
+
+### Central Configuration (`config.yaml`)
+
+All runtime options are managed declaratively in [`config.yaml`](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/config.yaml):
+
+```yaml
+# Toggle between "mock" (fast dry-runs) and "real" (GPU inference)
+mode: "real"
+
+model:
+  base_dir: "./models"
+  active_model: "qwen2.5-0.5b"
+  backbone_path: "./models/qwen2.5-0.5b"
+  heads_path: "./models/qwen2.5-0.5b/heads.safetensors"
+  backend: "mlx"
+
+server:
+  host: "0.0.0.0"
+  port: 8000
+```
+
 
 ### Running the Server
 
