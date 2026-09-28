@@ -72,12 +72,24 @@ fn default_queue_depth() -> usize {
 struct ModelConfig {
     #[serde(default = "default_model_name")]
     name: String,
+    #[serde(default = "default_mode")]
+    mode: String,
+    #[serde(default = "default_base_dir")]
+    base_dir: String,
     #[serde(default = "default_calibration_version")]
     calibration_version: String,
 }
 
 fn default_model_name() -> String {
     "qwen2.5-0.5b".to_string()
+}
+
+fn default_mode() -> String {
+    "real".to_string()
+}
+
+fn default_base_dir() -> String {
+    "./models".to_string()
 }
 
 fn default_calibration_version() -> String {
@@ -99,6 +111,8 @@ impl Default for Config {
             },
             model: ModelConfig {
                 name: default_model_name(),
+                mode: default_mode(),
+                base_dir: default_base_dir(),
                 calibration_version: default_calibration_version(),
             },
         }
@@ -128,18 +142,48 @@ async fn main() -> Result<()> {
     };
 
     info!(
-        "Loaded configuration: model='{}', batch_size={}, max_wait_ms={}, max_queue_depth={}",
+        "Loaded configuration: model='{}', mode='{}', batch_size={}, max_wait_ms={}, max_queue_depth={}",
         cfg.model.name,
+        cfg.model.mode,
         cfg.batching.max_batch_size,
         cfg.batching.max_wait_ms,
         cfg.batching.max_queue_depth
     );
 
-    // 1. Initialize inference engine
-    let engine = Arc::new(MockEngine::new(
-        &cfg.model.name,
-        &cfg.model.calibration_version,
-    ));
+    // 1. Initialize inference engine (Real vs Mock)
+    let engine: Arc<dyn openjev_engine::InferenceEngine> = if cfg.model.mode == "real" {
+        let model_dir = std::path::Path::new(&cfg.model.base_dir).join(&cfg.model.name);
+        match openjev_engine::RealMetalEngine::load(
+            &model_dir,
+            &cfg.model.name,
+            &cfg.model.calibration_version,
+        ) {
+            Ok(real_eng) => {
+                info!(
+                    "Initialized native RealMetalEngine from {}",
+                    model_dir.display()
+                );
+                Arc::new(real_eng)
+            }
+            Err(e) => {
+                warn!(
+                    "Failed to load real model from {}: {}. Falling back to MockEngine.",
+                    model_dir.display(),
+                    e
+                );
+                Arc::new(MockEngine::new(
+                    &cfg.model.name,
+                    &cfg.model.calibration_version,
+                ))
+            }
+        }
+    } else {
+        info!("Initialized MockEngine (mode='mock')");
+        Arc::new(MockEngine::new(
+            &cfg.model.name,
+            &cfg.model.calibration_version,
+        ))
+    };
 
     // 2. Initialize dynamic micro-batching dispatcher
     let dispatcher_cfg = DispatcherConfig {
@@ -151,7 +195,7 @@ async fn main() -> Result<()> {
 
     // 3. Setup Axum application
     let app_state = AppState {
-        engine: Arc::clone(&engine) as Arc<dyn openjev_engine::InferenceEngine>,
+        engine: Arc::clone(&engine),
         dispatcher: Arc::clone(&dispatcher),
     };
 

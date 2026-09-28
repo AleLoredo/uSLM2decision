@@ -16,6 +16,7 @@ max_queue_depth = 2048     # requests queued before load shedding
 
 [model]
 name = "qwen2.5-0.5b"
-mode = "mock"
+mode = "real"
 base_dir = "./models"
 calibration_version = "calib-canonical-v1"
+

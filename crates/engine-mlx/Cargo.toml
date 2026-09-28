@@ -11,6 +11,8 @@ thiserror.workspace = true
 crossbeam-channel.workspace = true
 tokio.workspace = true
 tracing.workspace = true
+safetensors.workspace = true
 
 openjev-core.workspace = true
 openjev-calibration.workspace = true
+

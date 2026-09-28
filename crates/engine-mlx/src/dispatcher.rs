@@ -41,7 +41,10 @@ pub struct BatchDispatcher {
 }
 
 impl BatchDispatcher {
-    pub fn new<E: InferenceEngine + 'static>(engine: Arc<E>, config: DispatcherConfig) -> Self {
+    pub fn new<E: InferenceEngine + ?Sized + 'static>(
+        engine: Arc<E>,
+        config: DispatcherConfig,
+    ) -> Self {
         let (tx, rx) = bounded::<BatchRequest>(config.max_queue_depth);
         let stopping = Arc::new(AtomicBool::new(false));
         let stopping_clone = Arc::clone(&stopping);
@@ -96,7 +99,7 @@ impl BatchDispatcher {
         }
     }
 
-    fn worker_loop<E: InferenceEngine + 'static>(
+    fn worker_loop<E: InferenceEngine + ?Sized + 'static>(
         engine: Arc<E>,
         rx: Receiver<BatchRequest>,
         stopping: Arc<AtomicBool>,
