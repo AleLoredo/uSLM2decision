@@ -57,12 +57,12 @@ if [ "$RUNTIME" = "rust" ]; then
   exec ./target/release/openjev-mlx
 fi
 
-# 2. Modo Docker (Linux con imagen construida)
-if [ "$OS" = "Linux" ] && command -v docker &> /dev/null && docker image inspect "$IMAGE_NAME" &> /dev/null; then
+# 2. Modo Docker (Linux / Windows con imagen construida)
+if [[ "$OS" =~ ^(Linux|MINGW|MSYS|CYGWIN) ]] && command -v docker &> /dev/null && docker image inspect "$IMAGE_NAME" &> /dev/null; then
   echo "-> Modo de ejecución: Contenedor Docker ($IMAGE_NAME)"
 
   GPU_FLAG=""
-  if command -v nvidia-smi &> /dev/null && docker info 2>/dev/null | grep -iq "nvidia"; then
+  if (command -v nvidia-smi &> /dev/null || command -v nvidia-smi.exe &> /dev/null) && docker info 2>/dev/null | grep -iq "nvidia"; then
     echo "-> Aceleración GPU NVIDIA activada (--gpus all)."
     GPU_FLAG="--gpus all"
   else

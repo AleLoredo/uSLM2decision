@@ -168,6 +168,130 @@ configure_openjev_python_wizard() {
   echo "============================================================"
 }
 
+diagnose_linux_windows_environment() {
+  local is_windows=false
+  local win_context="N/A"
+  local wsl_status="No detectado"
+  local docker_cli="No instalado"
+  local docker_daemon="Inactivo"
+  local nvidia_support="No disponible"
+  local host_nvidia=false
+
+  # 1. Detección de Windows vs Linux Nativo
+  case "$OS" in
+    MINGW*|MSYS*|CYGWIN*)
+      is_windows=true
+      win_context="Windows Host (Git Bash / MSYS)"
+      ;;
+    Linux*)
+      if [ -f "/proc/version" ] && grep -qi "microsoft" /proc/version; then
+        is_windows=true
+        if uname -r | grep -qi "wsl2\|microsoft-standard"; then
+          win_context="Windows Subsystem for Linux (WSL 2)"
+          wsl_status="Activo (WSL 2 nativo)"
+        else
+          win_context="Windows Subsystem for Linux (WSL 1)"
+          wsl_status="⚠️ WSL 1 activo (Sin soporte GPU passthrough)"
+        fi
+      else
+        is_windows=false
+      fi
+      ;;
+  esac
+
+  # Si estamos en Git Bash / MSYS en Windows, revisar si wsl.exe existe y qué versión tiene
+  if [ "$is_windows" = true ] && [ "$wsl_status" = "No detectado" ]; then
+    if command -v wsl.exe &> /dev/null; then
+      local wsl_out
+      wsl_out="$(wsl.exe --status 2>/dev/null | tr -d '\0' || true)"
+      if echo "$wsl_out" | grep -qi "version: 2"; then
+        wsl_status="Instalado (WSL 2 por defecto)"
+      elif echo "$wsl_out" | grep -qi "version: 1"; then
+        wsl_status="⚠️ WSL 1 configurado (Se requiere WSL 2 para GPU)"
+      else
+        local wsl_list
+        wsl_list="$(wsl.exe -l -v 2>/dev/null | tr -d '\0' || true)"
+        if echo "$wsl_list" | grep -q " 2 "; then
+          wsl_status="Instalado (Distro WSL 2 activa)"
+        elif echo "$wsl_list" | grep -q " 1 "; then
+          wsl_status="⚠️ Instalado pero en versión 1 (Actualizar a WSL 2)"
+        else
+          wsl_status="Instalado (Sin distribuciones configuradas)"
+        fi
+      fi
+    else
+      wsl_status="❌ No instalado o no disponible en PATH"
+    fi
+  fi
+
+  # 2. Detección de Docker CLI y Daemon
+  DOCKER_AVAILABLE=false
+  DOCKER_NVIDIA=false
+
+  if command -v docker &> /dev/null; then
+    docker_cli="Instalado ($(docker --version 2>/dev/null | cut -d',' -f1 || echo 'Docker'))"
+    if docker info &> /dev/null; then
+      docker_daemon="Activo y respondiendo"
+      DOCKER_AVAILABLE=true
+      if docker info 2>/dev/null | grep -iq "nvidia"; then
+        DOCKER_NVIDIA=true
+        nvidia_support="✅ Activo (nvidia-container-toolkit detectado)"
+      else
+        nvidia_support="⚠️ No detectado en Docker"
+      fi
+    else
+      docker_daemon="❌ Inactivo (Daemon no iniciado o sin permisos)"
+    fi
+  fi
+
+  # 3. Detección de GPU física en Host
+  if command -v nvidia-smi &> /dev/null || command -v nvidia-smi.exe &> /dev/null; then
+    host_nvidia=true
+  fi
+
+  echo ""
+  echo "============================================================"
+  echo "       Diagnóstico del Entorno (Windows / Docker / GPU)"
+  echo "============================================================"
+  if [ "$is_windows" = true ]; then
+    echo "  • Host Windows:        SÍ ($win_context)"
+    echo "  • Estado WSL:          $wsl_status"
+  else
+    echo "  • Sistema Operativo:   Linux Nativo ($ARCH)"
+  fi
+  echo "  • Docker CLI:          $docker_cli"
+  echo "  • Docker Daemon:       $docker_daemon"
+  echo "  • Soporte GPU NVIDIA:  $nvidia_support"
+  if [ "$host_nvidia" = true ] && [ "$DOCKER_NVIDIA" = false ]; then
+    echo "  • GPU en Host:         Detectada (nvidia-smi presente)"
+  fi
+  echo "------------------------------------------------------------"
+
+  # 4. Advertencias y guías específicas para Windows y WSL
+  if [ "$is_windows" = true ]; then
+    if [[ "$wsl_status" =~ "No instalado" ]] || [[ "$wsl_status" =~ "WSL 1" ]]; then
+      echo ""
+      echo "⚠️  NOTA CRÍTICA PARA USUARIOS DE WINDOWS:"
+      echo "   Para ejecutar contenedores Linux con aceleración GPU NVIDIA en Docker,"
+      echo "   Windows requiere obligatoriamente el backend WSL 2 (Windows Subsystem for Linux 2)."
+      echo "   El backend clásico basado en Hyper-V NO permite exponer la GPU al contenedor."
+      echo ""
+      echo "   Pasos recomendados para habilitar WSL 2:"
+      echo "   1. Abre PowerShell como Administrador y ejecuta:"
+      echo "        wsl --install"
+      echo "   2. Reinicia el equipo si Windows lo solicita."
+      echo "   3. Abre Docker Desktop -> Settings -> General:"
+      echo "        Asegúrate de marcar 'Use the WSL 2 based engine'."
+      echo "   4. Abre Docker Desktop -> Settings -> Resources -> WSL Integration:"
+      echo "        Habilita la integración con tu distribución de Linux (ej. Ubuntu)."
+      echo "------------------------------------------------------------"
+    fi
+  fi
+
+  # Exportar variable de host windows para uso en el caller
+  IS_WINDOWS_HOST="$is_windows"
+}
+
 install_python_runtime() {
   case "$OS" in
     Darwin)
@@ -205,13 +329,7 @@ install_python_runtime() {
       ;;
 
     Linux*|MINGW*|MSYS*|CYGWIN*)
-      echo "-> Entorno detectado: Linux / Windows"
-
-      # Verificar disponibilidad de Docker (instalación y daemon activo)
-      DOCKER_AVAILABLE=false
-      if command -v docker &> /dev/null && docker info &> /dev/null; then
-        DOCKER_AVAILABLE=true
-      fi
+      diagnose_linux_windows_environment
 
       if [ "$DOCKER_AVAILABLE" = false ]; then
         echo ""
@@ -225,8 +343,12 @@ install_python_runtime() {
           echo ""
           echo "Por favor:"
           echo " 1. Instala o inicia Docker Desktop / Docker Engine."
-          echo " 2. Asegúrate de que el daemon esté activo ('docker info')."
-          echo " 3. Vuelve a ejecutar: ./install.sh"
+          if [ "$IS_WINDOWS_HOST" = true ]; then
+            echo " 2. Asegúrate de tener WSL 2 configurado ('wsl --install')."
+            echo " 3. En Docker Desktop, activa 'Use the WSL 2 based engine'."
+          fi
+          echo " 4. Asegúrate de que el daemon esté activo ('docker info')."
+          echo " 5. Vuelve a ejecutar: ./install.sh"
           exit 0
         else
           echo "-> Continuando con la instalación nativa local..."
@@ -237,9 +359,13 @@ install_python_runtime() {
         DOCKER_RESP="${DOCKER_RESP:-s}"
 
         if [[ "$DOCKER_RESP" =~ ^[sSyY]$ ]]; then
-          if ! docker info 2>/dev/null | grep -iq "nvidia"; then
+          if [ "$DOCKER_NVIDIA" = false ]; then
             echo "⚠️  Aviso: Soporte de GPU NVIDIA en Docker no detectado."
-            echo "   Asegúrate de tener configurado 'nvidia-container-toolkit' para aceleración por hardware."
+            if [ "$IS_WINDOWS_HOST" = true ]; then
+              echo "   Asegúrate de que Docker Desktop use el backend WSL 2 y tengas drivers NVIDIA actualizados."
+            else
+              echo "   Asegúrate de tener configurado 'nvidia-container-toolkit' para aceleración por hardware."
+            fi
           fi
 
           echo "-> Compilando imagen Docker '$IMAGE_NAME'..."
