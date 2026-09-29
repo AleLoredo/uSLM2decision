@@ -14,6 +14,13 @@ install_rust_runtime() {
   echo "       Instalación del Paquete Nativo de Rust (openjev-mlx)"
   echo "============================================================"
 
+  if [ "$OS" != "Darwin" ] || [ "$ARCH" != "arm64" ]; then
+    echo "❌ Error: El runtime nativo de Rust (openjev-mlx) está optimizado exclusivamente"
+    echo "   para macOS Apple Silicon (arm64 / Metal GPU)."
+    echo "   Para Linux o Windows con aceleración NVIDIA GPU, por favor selecciona la opción [1] (Python / Docker)."
+    exit 1
+  fi
+
   if ! command -v cargo &> /dev/null; then
     echo "❌ Error: 'cargo' no está instalado en el sistema."
     echo "Para instalar el toolchain oficial de Rust, ejecuta:"
