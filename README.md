@@ -15,8 +15,10 @@ OpenJEV is an open-source inference engine designed to evaluate unstructured con
 - **Calibrated Alignment:**
   - Trained via **Combined Focal + Brier Score Regularization**, achieving an Expected Calibration Error (**ECE**) of **3.67%** (vs 14.82% for standard cross-entropy).
   - Built-in **Fast Post-Hoc Recalibration** tools (<50ms execution on 200 domain samples) bringing Out-of-Distribution ECE down from **18.26% to 3.34%**.
-- **Dual Serving Engines:**
-  - **Edge Tier (Apple Silicon / Metal GPU):** Self-hosted FastAPI server (`server/edge_server.py`) delivering **sub-100ms** latency at 256 tokens for 0.5B model tier with thread-safe MLX backend execution.
+- **Multi-Runtime Serving Tier:**
+  - **Native Rust Engine (`openjev-mlx`):** Standalone compiled binary on Apple Silicon (Metal GPU) with zero Python overhead, Axum HTTP serving, dynamic batching, native `safetensors` loader, and sub-50ms latency.
+  - **Python Edge Engine (Apple Silicon / Metal GPU):** FastAPI server (`server/edge_server.py`) with MLX backend execution.
+  - **Containerized GPU Tier (Linux / Windows WSL 2):** Dockerized deployment with NVIDIA CUDA acceleration (`Dockerfile`).
   - **Cloud Tier (vLLM Prefix-Caching):** Parallel non-autoregressive query evaluation sharing context KV-caches (`server/vllm_prefix_serving.py`).
 - **Strict Normative Specification (`SPEC.md`):**
   - Fully compliant HTTP API contract (`POST /v1/decide`, `/healthz`, `/readyz`, `/metrics`).
@@ -40,66 +42,112 @@ OpenJEV is an open-source inference engine designed to evaluate unstructured con
 
 ### Prerequisites
 
-- **macOS** (Apple Silicon M1/M2/M3/M4) or **Linux / Windows (WSL/Git Bash)**
-- Python 3.10+
-- Docker Engine / Docker Desktop *(optional, for containerized deployment on Linux/Windows)*
+- **macOS** (Apple Silicon M1/M2/M3/M4) or **Linux / Windows (WSL 2 required for NVIDIA GPU passthrough)**
+- **For Python runtime:** Python 3.10+
+- **For Native Rust runtime:** Rust 1.75+ (`curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`)
+- **For Containerized runtime:** Docker Engine / Docker Desktop (with WSL 2 backend on Windows)
 
 ### Automated Setup & Installation
 
-OpenJEV provides an automated cross-platform installation script ([`install.sh`](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/install.sh)) that inspects your host operating system, configures the optimal runtime environment, and sets up your model configuration:
-
-- **macOS (Apple Silicon):** Configures a native `.venv` with Apple Metal GPU acceleration (`mlx`).
-- **Linux / Windows:** Detects Docker and NVIDIA GPU drivers (`nvidia-container-toolkit`) to build a Docker container, or sets up a native `.venv` with PyTorch CUDA.
-- **Interactive Configuration:** Lets you select between `mock` mode (fast integration testing without weight downloads) and `real` mode (with auto-download of Qwen2.5-0.5B or custom local models in `./models`).
+OpenJEV provides an automated cross-platform installation script ([`install.sh`](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/install.sh)) that inspects your host operating system, diagnoses GPU/Docker/WSL capabilities, and configures the chosen runtime:
 
 ```bash
 # Clone the repository
 git clone https://github.com/AleLoredo/OpenJEV.git
 cd OpenJEV
 
-# Run automated installer & interactive setup
+# Run interactive installer (prompts for Python vs Native Rust runtime)
 ./install.sh
 ```
 
-### Central Configuration (`config.yaml`)
+#### Shortcut Flags & Modular Scripts
 
-All runtime options are managed declaratively in [`config.yaml`](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/config.yaml):
+The installer can also be run with non-interactive flags or invoked via modular sub-scripts in [`scripts/`](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scripts/):
 
-```yaml
-# Toggle between "mock" (fast dry-runs) and "real" (GPU inference)
-mode: "real"
+```bash
+# Run environment diagnostics and check GPU/WSL/Docker status (OpenJEV Doctor)
+./install.sh --check        # or ./scripts/check_env.sh
 
-model:
-  base_dir: "./models"
-  active_model: "qwen2.5-0.5b"
-  backbone_path: "./models/qwen2.5-0.5b"
-  heads_path: "./models/qwen2.5-0.5b/heads.safetensors"
-  backend: "mlx"
+# Directly install Native Rust engine (Apple Silicon)
+./install.sh --rust         # or ./scripts/install_rust.sh
 
-server:
-  host: "0.0.0.0"
-  port: 8000
+# Directly install Python runtime (.venv or Docker)
+./install.sh --python       # or ./scripts/install_python.sh
+
+# Run model download / setup wizard independently
+./install.sh --model        # or ./scripts/setup_model.sh
 ```
 
+---
+
+### Configuration
+
+OpenJEV supports two runtime engines depending on your deployment target:
+
+1. **Python Engine Configuration ([`config.yaml`](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/config.yaml)):**
+   ```yaml
+   mode: "real"                # "mock" (fast dry-runs) or "real" (GPU inference)
+   model:
+     base_dir: "./models"
+     active_model: "qwen2.5-0.5b"
+     backbone_path: "./models/qwen2.5-0.5b"
+     heads_path: "./models/qwen2.5-0.5b/heads.safetensors"
+     backend: "mlx"            # "mlx" (Metal GPU) or "torch" (CUDA)
+   server:
+     host: "0.0.0.0"
+     port: 8000
+   ```
+
+2. **Native Rust Engine Configuration ([`config/engine.toml`](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/config/engine.toml)):**
+   ```toml
+   [server]
+   host = "0.0.0.0"
+   port = 8000
+
+   [batching]
+   max_batch_size = 16
+   max_wait_ms = 8
+   max_queue_depth = 2048
+
+   [model]
+   name = "qwen2.5-0.5b"
+   mode = "real"               # "mock" or "real"
+   base_dir = "./models"
+   calibration_version = "calib-canonical-v1"
+   ```
+
+---
 
 ### Running the Server
 
-Use [`run.sh`](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/run.sh) to launch the server. It automatically detects whether to run via Docker container or native `.venv`:
+Use [`run.sh`](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/run.sh) to launch the server. It automatically detects the installed runtime:
 
 ```bash
-# Start server on default port 8000
+# Auto-detect and launch the configured server
 ./run.sh
 
-# Or customize host and port via environment variables
+# Explicitly select runtime:
+./run.sh --rust             # Launch compiled Rust binary (openjev-mlx)
+./run.sh --python           # Launch Python FastAPI server (.venv)
+
+# Customize host and port:
 PORT=9000 HOST=127.0.0.1 ./run.sh
 ```
+
+---
 
 ### Running Tests
 
 ```bash
+# Run Python test suite (49 unit and integration tests)
 source .venv/bin/activate
 PYTHONPATH=. pytest tests/ -v
+
+# Run Rust test suite (parity, head math, and block-causal tests)
+cargo test --workspace
 ```
+
+---
 
 ### Sample API Request
 
