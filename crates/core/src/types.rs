@@ -1,12 +1,41 @@
 //! API data structures conforming to SPEC.md §4.
 
+use serde::de::{self, Deserializer};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DecideRequest {
     pub context: String,
+    #[serde(deserialize_with = "deserialize_queries")]
     pub queries: Vec<Query>,
+}
+
+fn deserialize_queries<'de, D>(deserializer: D) -> Result<Vec<Query>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let val = Value::deserialize(deserializer)?;
+    match val {
+        Value::Array(arr) => {
+            serde_json::from_value(Value::Array(arr)).map_err(de::Error::custom)
+        }
+        Value::Object(map) => {
+            let mut queries = Vec::new();
+            for (id, mut q_val) in map {
+                if let Value::Object(ref mut q_map) = q_val {
+                    if !q_map.contains_key("id") {
+                        q_map.insert("id".to_string(), Value::String(id));
+                    }
+                }
+                let query: Query = serde_json::from_value(q_val).map_err(de::Error::custom)?;
+                queries.push(query);
+            }
+            Ok(queries)
+        }
+        _ => Err(de::Error::custom("queries must be a list or a map of query objects")),
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -142,4 +171,41 @@ pub struct DecideResponse {
 pub struct ErrorResponse {
     pub error: String,
     pub detail: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_deserialize_decide_request_from_array() {
+        let json_str = r#"{
+            "context": "test context",
+            "queries": [
+                {"type": "bool", "id": "q1", "criteria": "is valid"}
+            ]
+        }"#;
+        let req: DecideRequest = serde_json::from_str(json_str).expect("failed to parse array");
+        assert_eq!(req.queries.len(), 1);
+        assert_eq!(req.queries[0].id(), Some("q1"));
+    }
+
+    #[test]
+    fn test_deserialize_decide_request_from_map() {
+        let json_str = r#"{
+            "context": "test context",
+            "queries": {
+                "q_bool": {
+                    "type": "bool",
+                    "criteria": "is valid"
+                },
+                "q_score": {
+                    "type": "score",
+                    "rubric": "1 to 5"
+                }
+            }
+        }"#;
+        let req: DecideRequest = serde_json::from_str(json_str).expect("failed to parse map");
+        assert_eq!(req.queries.len(), 2);
+    }
 }

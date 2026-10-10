@@ -15,10 +15,10 @@ Integrated Middlewares:
 import time
 import uuid
 import asyncio
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Union
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Response, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from core.config import load_config
 from core.engine_factory import create_engine
 from core.batching.types import QueuedRequest, QueueFullError
@@ -100,7 +100,22 @@ class ScoreQuerySchema(BaseModel):
 
 class DecideRequest(BaseModel):
     context: str
-    queries: List[Dict[str, Any]]
+    queries: Union[List[Dict[str, Any]], Dict[str, Dict[str, Any]]]
+
+    @field_validator("queries", mode="before")
+    @classmethod
+    def normalize_queries(cls, v):
+        if isinstance(v, dict):
+            normalized = []
+            for q_id, q_data in v.items():
+                if isinstance(q_data, dict):
+                    item = dict(q_data)
+                    item.setdefault("id", str(q_id))
+                    normalized.append(item)
+                else:
+                    normalized.append(q_data)
+            return normalized
+        return v
 
 @app.get("/healthz", status_code=status.HTTP_200_OK)
 def healthz():

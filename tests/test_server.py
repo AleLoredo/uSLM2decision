@@ -95,6 +95,29 @@ def test_decide_endpoint_invalid_payload():
     res_invalid = client.post("/v1/decide", json={"context": "test", "queries": [{"type": "unknown"}]})
     assert res_invalid.status_code == 400
 
+def test_decide_endpoint_dict_queries():
+    payload = {
+        "context": "Cliente solicita reemplazo porque llegó roto.",
+        "queries": {
+            "reembolso_valido": {
+                "type": "bool",
+                "criteria": "¿El reclamo califica para reembolso directo?"
+            },
+            "urgencia": {
+                "type": "score",
+                "min": 1,
+                "max": 5,
+                "rubric": "1=baja, 5=critica"
+            }
+        }
+    }
+    response = client.post("/v1/decide", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["decisions"]) == 2
+    assert any(d["id"] == "reembolso_valido" for d in data["decisions"])
+    assert any(d["id"] == "urgencia" for d in data["decisions"])
+
 def test_vllm_prefix_serving_engine():
     engine = VLLMPrefixServingEngine()
     prefill_res = engine.prefill_state_context("Context document text")
