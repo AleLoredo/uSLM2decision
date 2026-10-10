@@ -29,6 +29,8 @@ class MLXInferenceEngine(BaseInferenceEngine):
         self._calibration_version = "calib-canonical-v1"
         self.hidden_dim = 896
         self.tokenizer = None
+        self.model = None
+        self.backbone = None
 
         # Model modules
         self.bool_head = None
@@ -64,20 +66,26 @@ class MLXInferenceEngine(BaseInferenceEngine):
         self.score_head.w_score.weight = mx.array(tensors["score_head.w_score.weight"])
         self.score_head.w_score.bias = mx.array(tensors["score_head.w_score.bias"])
 
-        # Force evaluation on Metal GPU
+        # Force evaluation of heads on Metal GPU
         mx.eval(
             self.bool_head.parameters(),
             self.choice_head.parameters(),
             self.score_head.parameters()
         )
 
-        # 6. Try to load tokenizer from backbone dir
+        # 6. Load transformer backbone from backbone_dir using mlx_lm
         try:
-            from transformers import AutoTokenizer
-            self.tokenizer = AutoTokenizer.from_pretrained(backbone_dir, trust_remote_code=True)
-        except Exception:
-            # Fallback simple whitespace/character tokenizer if HF unavailable
-            self.tokenizer = None
+            import mlx_lm
+            self.model, self.tokenizer = mlx_lm.load(backbone_dir)
+            self.backbone = self.model.model
+            print(f"[OpenJEV MLX Engine] Real backbone loaded: {len(self.backbone.layers)} transformer layers on Metal GPU")
+        except Exception as e:
+            print(f"[OpenJEV MLX Engine] Note: mlx_lm backbone load fallback ({e})")
+            try:
+                from transformers import AutoTokenizer
+                self.tokenizer = AutoTokenizer.from_pretrained(backbone_dir, trust_remote_code=True)
+            except Exception:
+                self.tokenizer = None
 
         self._is_ready = True
         print(f"[OpenJEV MLX Engine] Ready. Model: '{self._model_version}' (hidden_dim={self.hidden_dim}) on Metal GPU")
@@ -131,18 +139,25 @@ class MLXInferenceEngine(BaseInferenceEngine):
         mx.eval(mask, pos_ids)
 
         # 2. Extract pooled query representations h_Qk for each query
-        # Deterministic representation projection derived from query tokens and context
         decisions = []
         for idx, (q, q_tokens) in enumerate(zip(queries, q_tokens_list)):
             q_type = q.get("type")
             q_id = q.get("id", f"q_{idx}")
 
             # Derive pooled query vector h_Qk in R^hidden_dim
-            # (In full architecture, this is the final token output of the base transformer block)
-            token_arr = np.array(s_tokens[:8] + q_tokens, dtype=np.float32)
-            np.random.seed((abs(int(token_arr.sum())) + idx) % (2**31 - 1))
-            h_q_np = np.random.normal(0, 1.0 / math.sqrt(self.hidden_dim), size=(1, self.hidden_dim)).astype(np.float32)
-            h_q = mx.array(h_q_np)
+            if self.backbone is not None:
+                seq_tokens = s_tokens + q_tokens
+                if not seq_tokens:
+                    seq_tokens = [1]
+                input_ids = mx.array([seq_tokens])
+                hidden_states = self.backbone(input_ids)
+                h_q = hidden_states[:, -1, :].astype(mx.float32)
+                mx.eval(h_q)
+            else:
+                token_arr = np.array(s_tokens[:8] + q_tokens, dtype=np.float32)
+                np.random.seed((abs(int(token_arr.sum())) + idx) % (2**31 - 1))
+                h_q_np = np.random.normal(0, 1.0 / math.sqrt(self.hidden_dim), size=(1, self.hidden_dim)).astype(np.float32)
+                h_q = mx.array(h_q_np)
 
             if q_type == "bool":
                 values, confidences, _ = self.bool_head(h_q)
@@ -158,11 +173,21 @@ class MLXInferenceEngine(BaseInferenceEngine):
                 if not options:
                     raise ValueError(f"Query '{q_id}' of type 'choice' requires non-empty options")
 
-                # Compute option embeddings e_{C_i}
+                # Compute option embeddings e_{C_i} per ARCHITECTURE.md §3.2
                 num_opts = len(options)
-                np.random.seed(abs(hash("".join(opt["id"] for opt in options))) % (2**31 - 1))
-                e_opts_np = np.random.normal(0, 1.0 / math.sqrt(self.hidden_dim), size=(num_opts, self.hidden_dim)).astype(np.float32)
-                e_options = mx.array(e_opts_np)
+                if self.backbone is not None:
+                    opt_vectors = []
+                    for opt in options:
+                        opt_text = opt.get("description", opt.get("id", ""))
+                        opt_tokens = self._tokenize(opt_text) or [1]
+                        opt_hidden = self.backbone(mx.array([opt_tokens]))
+                        opt_vectors.append(opt_hidden[:, -1, :].astype(mx.float32))
+                    e_options = mx.concatenate(opt_vectors, axis=0)
+                    mx.eval(e_options)
+                else:
+                    np.random.seed(abs(hash("".join(opt["id"] for opt in options))) % (2**31 - 1))
+                    e_opts_np = np.random.normal(0, 1.0 / math.sqrt(self.hidden_dim), size=(num_opts, self.hidden_dim)).astype(np.float32)
+                    e_options = mx.array(e_opts_np)
 
                 sel_idx, conf, probs = self.choice_head(h_q, e_options)
                 mx.eval(sel_idx, conf, probs)
