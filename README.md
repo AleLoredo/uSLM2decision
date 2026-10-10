@@ -38,6 +38,25 @@ OpenJEV is an open-source inference engine designed to evaluate unstructured con
 
 ---
 
+## 📌 Current Status & Recent Updates
+
+- **Active Model Backbone & Weights:**
+  - **Qwen2.5-0.5B** is downloaded and active in [`models/qwen2.5-0.5b/`](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/models/qwen2.5-0.5b) (4-bit MLX weights `model.safetensors`, 278 MB).
+  - Decision task heads (`heads.safetensors`, 3.2 MB) initialized with canonical dimensions (`hidden_size: 896`).
+  - Real serving verified on Apple Silicon Metal GPU with measured latencies of **15–45 ms**.
+- **Dual Query Schema Support (Map & Array Formats):**
+  - `POST /v1/decide` seamlessly accepts `queries` formatted both as a **JSON Map/Dictionary** (`"queries": { "<id>": { ... } }`) per [`SPEC.md §4.1`](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/SPEC.md#L93-L107) and as a **JSON Array** (`"queries": [ { "id": "<id>", ... } ]`) across both Python (`FastAPI`) and Rust (`Axum`) runtimes.
+- **Automated Environment Diagnostics ("OpenJEV Doctor"):**
+  - Read-only diagnostics via `./install.sh --check` or [`scripts/check_env.sh`](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scripts/check_env.sh).
+  - Automatically identifies macOS Metal, native Linux, and Windows hosts (distinguishing Git Bash / MSYS vs WSL 1 vs WSL 2), Docker daemon status, and NVIDIA GPU container passthrough (`nvidia-container-toolkit`).
+- **Modular Installer Architecture:**
+  - [`install.sh`](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/install.sh) refactored into a lean orchestrator with CLI flags (`--rust`, `--python`, `--check`, `--model`).
+  - Dedicated sub-scripts in [`scripts/`](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scripts/) (`check_env.sh`, `install_python.sh`, `install_rust.sh`, `setup_model.sh`).
+- **Next Milestone:**
+  - Connecting the full 24-layer transformer forward pass of `model.safetensors` to task decision heads, followed by supervised multi-task linear probing to transition task heads from initial canonical baseline to high-certainty calibrated inference.
+
+---
+
 ## 🛠️ Quickstart
 
 ### Prerequisites
