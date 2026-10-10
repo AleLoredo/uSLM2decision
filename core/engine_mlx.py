@@ -5,7 +5,7 @@ Implements non-autoregressive decision inference per SPEC.md and ARCHITECTURE.md
 
 import os
 import math
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 import numpy as np
 import mlx.core as mx
 import mlx.nn as nn
@@ -119,13 +119,24 @@ class MLXInferenceEngine(BaseInferenceEngine):
             return q.get("rubric", "")
         return ""
 
-    def decide(self, context: str, queries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def decide(self, context: str, queries: Union[List[Dict[str, Any]], Dict[str, Dict[str, Any]]]) -> List[Dict[str, Any]]:
         """
         Executes real decision forward pass with block-causal attention masking and
         per-segment position IDs.
         """
         if not self._is_ready:
             raise RuntimeError("Engine is not warmed up. Call load_model() first.")
+
+        if isinstance(queries, dict):
+            normalized = []
+            for q_id, q_data in queries.items():
+                if isinstance(q_data, dict):
+                    item = dict(q_data)
+                    item.setdefault("id", str(q_id))
+                    normalized.append(item)
+                else:
+                    normalized.append(q_data)
+            queries = normalized
 
         s_tokens = self._tokenize(context)
         s_len = max(len(s_tokens), 1)
@@ -232,13 +243,21 @@ class MLXInferenceEngine(BaseInferenceEngine):
 
     def decide_batch(self, requests: List[Any]) -> List[List[Dict[str, Any]]]:
         """
-        Executes a batch of requests in a single packed forward pass on Metal GPU.
-        Multi-request sequences are packed with isolated block-causal attention masks.
+        Executes a batch of requests in a forward pass on Metal GPU.
+        When real transformer backbone is loaded, processes queries through the Metal GPU backbone.
         """
         if not self._is_ready:
             raise RuntimeError("Engine is not warmed up. Call load_model() first.")
         if not requests:
             return []
+
+        if self.backbone is not None:
+            results = []
+            for req in requests:
+                ctx = getattr(req, "context", None) if hasattr(req, "context") else (req.get("context", "") if isinstance(req, dict) else "")
+                queries = getattr(req, "queries", None) if hasattr(req, "queries") else (req.get("queries", []) if isinstance(req, dict) else [])
+                results.append(self.decide(ctx, queries))
+            return results
 
         from core.batching.packer import pack_requests
         packed = pack_requests(requests, tokenize_fn=self._tokenize, state_causal=True)
