@@ -1,10 +1,10 @@
 """
 OpenJEV Abstract Engine Interface
-Defines the normative contract for decision inference engines.
+Defines the normative contract for System 1 decision inference engines per SPEC.md and ARCHITECTURE.md.
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union
 
 class BaseInferenceEngine(ABC):
     @abstractmethod
@@ -18,16 +18,24 @@ class BaseInferenceEngine(ABC):
         pass
 
     @abstractmethod
-    def decide(self, context: str, queries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Executes decision queries over context in a single forward pass."""
+    def decide(self, state: Union[str, Dict[str, Any], List[Any]], questions: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Executes decision questions over state in a single forward pass.
+        Returns a dictionary containing 'answers' and 'usage'.
+        """
         pass
 
-    def decide_batch(self, requests: List[Any]) -> List[List[Dict[str, Any]]]:
+    def decide_batch(self, requests: List[Any]) -> List[Dict[str, Any]]:
         """
-        Executes a batch of requests in a single forward pass.
+        Executes a batch of requests in a forward pass.
         Default implementation evaluates each request sequentially.
         """
-        return [self.decide(req.context, req.queries) for req in requests]
+        results = []
+        for req in requests:
+            st = getattr(req, "state", None) if hasattr(req, "state") else req.get("state", "")
+            qs = getattr(req, "questions", None) if hasattr(req, "questions") else req.get("questions", {})
+            results.append(self.decide(st, qs))
+        return results
 
     @property
     @abstractmethod
@@ -38,5 +46,5 @@ class BaseInferenceEngine(ABC):
     @property
     @abstractmethod
     def calibration_version(self) -> str:
-        """Identifier of active calibration version."""
+        """Identifier of active calibration artifact version."""
         pass

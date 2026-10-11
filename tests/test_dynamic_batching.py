@@ -18,7 +18,7 @@ from fastapi.testclient import TestClient
 
 from core.batching.types import QueuedRequest, QueueFullError
 from core.batching.queue import BatchQueue
-from core.batching.packer import pack_requests, extract_query_text
+from core.batching.packer import pack_requests, extract_question_text
 from core.batching.dispatcher import BatchDispatcher
 from core.config import load_config
 from core.engine_factory import create_engine
@@ -27,7 +27,7 @@ from server.edge_server import app
 def test_batch_queue_accumulation():
     queue = BatchQueue(max_batch_size=4, max_wait_ms=50, max_queue_depth=10)
     for i in range(4):
-        queue.put(QueuedRequest(request_id=f"r_{i}", context="ctx", queries=[]))
+        queue.put(QueuedRequest(request_id=f"r_{i}", state="ctx", questions={}))
 
     batch = queue.get_batch(timeout=0.1)
     assert len(batch) == 4
@@ -36,8 +36,8 @@ def test_batch_queue_accumulation():
 def test_batch_queue_timeout_partial_batch():
     queue = BatchQueue(max_batch_size=8, max_wait_ms=15, max_queue_depth=10)
     # Put only 2 requests
-    queue.put(QueuedRequest(request_id="r_0", context="ctx", queries=[]))
-    queue.put(QueuedRequest(request_id="r_1", context="ctx", queries=[]))
+    queue.put(QueuedRequest(request_id="r_0", state="ctx", questions={}))
+    queue.put(QueuedRequest(request_id="r_1", state="ctx", questions={}))
 
     t0 = time.time()
     batch = queue.get_batch(timeout=0.1)
@@ -51,10 +51,10 @@ def test_batch_queue_timeout_partial_batch():
 def test_batch_queue_backpressure_rejection():
     queue = BatchQueue(max_batch_size=4, max_wait_ms=10, max_queue_depth=3)
     for i in range(3):
-        queue.put(QueuedRequest(request_id=f"r_{i}", context="ctx", queries=[]))
+        queue.put(QueuedRequest(request_id=f"r_{i}", state="ctx", questions={}))
 
     with pytest.raises(QueueFullError):
-        queue.put(QueuedRequest(request_id="r_overflow", context="ctx", queries=[]))
+        queue.put(QueuedRequest(request_id="r_overflow", state="ctx", questions={}))
 
 def test_multi_request_packer_isolation():
     def mock_tokenizer(text: str):
@@ -62,25 +62,25 @@ def test_multi_request_packer_isolation():
 
     req1 = QueuedRequest(
         request_id="req_1",
-        context="Alpha state document", # 3 tokens
-        queries=[
-            {"id": "q1_1", "type": "bool", "criteria": "Is alpha true?"} # 4 tokens
-        ]
+        state="Alpha state document", # 3 tokens
+        questions={
+            "q1_1": {"type": "noul", "instructions": "Is alpha true?"} # 3 tokens
+        }
     )
     req2 = QueuedRequest(
         request_id="req_2",
-        context="Beta context information here", # 4 tokens
-        queries=[
-            {"id": "q2_1", "type": "bool", "criteria": "Is beta active?"} # 4 tokens
-        ]
+        state="Beta context information here", # 4 tokens
+        questions={
+            "q2_1": {"type": "noul", "instructions": "Is beta active?"} # 3 tokens
+        }
     )
 
     packed = pack_requests([req1, req2], tokenize_fn=mock_tokenizer, state_causal=True)
     mask_np = np.array(packed.mask)[0, 0] # (T, T)
     pos_ids_np = np.array(packed.position_ids)[0] # (T,)
 
-    len_req1 = len(mock_tokenizer(req1.context)) + len(mock_tokenizer(req1.queries[0]["criteria"]))
-    len_req2 = len(mock_tokenizer(req2.context)) + len(mock_tokenizer(req2.queries[0]["criteria"]))
+    len_req1 = len(mock_tokenizer(req1.state)) + len(mock_tokenizer(req1.questions["q1_1"]["instructions"]))
+    len_req2 = len(mock_tokenizer(req2.state)) + len(mock_tokenizer(req2.questions["q2_1"]["instructions"]))
     total_tokens = len_req1 + len_req2
     assert packed.total_tokens == total_tokens
     assert mask_np.shape == (total_tokens, total_tokens)
@@ -92,7 +92,7 @@ def test_multi_request_packer_isolation():
     assert np.all(mask_np[len_req1:, :len_req1] <= -1e8)
 
     # 2. Check intra-request state and causal attention for req1
-    # Req1 query (tokens 3..6) attends to Req1 state (tokens 0..2)
+    # Req1 query (tokens 3..5) attends to Req1 state (tokens 0..2)
     assert np.all(mask_np[3:len_req1, :3] == 0.0)
 
     # 3. Check intra-request state and causal attention for req2
@@ -121,11 +121,15 @@ async def test_batch_dispatcher_concurrent_execution():
         fut = loop.create_future()
         req = QueuedRequest(
             request_id=f"concurrent_{idx}",
-            context=f"Context for worker request number {idx}",
-            queries=[
-                {"id": f"q_bool_{idx}", "type": "bool", "criteria": f"Is condition {idx} satisfied?"},
-                {"id": f"q_choice_{idx}", "type": "choice", "options": [{"id": "a", "description": "Opt A"}, {"id": "b", "description": "Opt B"}]}
-            ],
+            state=f"Context for worker request number {idx}",
+            questions={
+                f"q_noul_{idx}": {"type": "noul", "instructions": f"Is condition {idx} satisfied?"},
+                f"q_choice_{idx}": {
+                    "type": "choice",
+                    "instructions": "Select option",
+                    "criteria": {"a": "Opt A", "b": "Opt B"}
+                }
+            },
             loop=loop,
             future=fut
         )
@@ -140,21 +144,21 @@ async def test_batch_dispatcher_concurrent_execution():
 
     assert len(results) == 8
     for i, res in enumerate(results):
-        assert len(res) == 2
-        assert res[0]["id"] == f"q_bool_{i}"
-        assert res[0]["type"] == "bool"
-        assert res[1]["id"] == f"q_choice_{i}"
-        assert res[1]["type"] == "choice"
+        answers = res["answers"]
+        assert f"q_noul_{i}" in answers
+        assert answers[f"q_noul_{i}"]["type"] == "noul"
+        assert f"q_choice_{i}" in answers
+        assert answers[f"q_choice_{i}"]["type"] == "choice"
 
 def test_server_concurrent_requests_under_batching():
     client = TestClient(app)
 
     def post_request(idx: int):
         payload = {
-            "context": f"Document context payload for client thread {idx}",
-            "queries": [
-                {"id": f"q_{idx}", "type": "bool", "criteria": f"Criterion check {idx}"}
-            ]
+            "state": f"Document context payload for client thread {idx}",
+            "questions": {
+                f"q_{idx}": {"type": "noul", "instructions": f"Criterion check {idx}"}
+            }
         }
         res = client.post("/v1/decide", json=payload)
         return res.status_code, res.json()
@@ -166,6 +170,7 @@ def test_server_concurrent_requests_under_batching():
     assert len(results) == 12
     for status_code, data in results:
         assert status_code == 200
-        assert "decisions" in data
-        assert len(data["decisions"]) == 1
-        assert data["decisions"][0]["type"] == "bool"
+        assert "answers" in data
+        assert len(data["answers"]) == 1
+        q_ans = list(data["answers"].values())[0]
+        assert q_ans["type"] == "noul"

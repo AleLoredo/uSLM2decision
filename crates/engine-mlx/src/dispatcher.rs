@@ -3,7 +3,8 @@
 
 use crate::types::{EngineError, InferenceEngine};
 use crossbeam_channel::{bounded, Receiver, Sender, TrySendError};
-use openjev_core::types::{Decision, Query};
+use openjev_core::types::{Answer, Question, UsageInfo};
+use std::collections::HashMap;
 use std::panic::AssertUnwindSafe;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -12,10 +13,12 @@ use std::time::{Duration, Instant};
 use tokio::sync::oneshot;
 use tracing::{error, info};
 
+pub type DispatcherResponse = Result<(HashMap<String, Answer>, UsageInfo), EngineError>;
+
 pub struct BatchRequest {
-    pub context: String,
-    pub queries: Vec<Query>,
-    pub response_tx: oneshot::Sender<Result<Vec<Decision>, EngineError>>,
+    pub state: String,
+    pub questions: HashMap<String, Question>,
+    pub response_tx: oneshot::Sender<DispatcherResponse>,
 }
 
 pub struct DispatcherConfig {
@@ -66,13 +69,13 @@ impl BatchDispatcher {
 
     pub fn submit(
         &self,
-        context: String,
-        queries: Vec<Query>,
-    ) -> oneshot::Receiver<Result<Vec<Decision>, EngineError>> {
+        state: String,
+        questions: HashMap<String, Question>,
+    ) -> oneshot::Receiver<DispatcherResponse> {
         let (resp_tx, resp_rx) = oneshot::channel();
         let req = BatchRequest {
-            context,
-            queries,
+            state,
+            questions,
             response_tx: resp_tx,
         };
 
@@ -131,12 +134,13 @@ impl BatchDispatcher {
             // Execute batch forward pass wrapped in catch_unwind
             for req in batch {
                 let engine_ref = Arc::clone(&engine);
-                let ctx = req.context;
-                let qs = req.queries;
+                let state = req.state;
+                let questions = req.questions;
 
                 // FFI panic safety: catch_unwind protects the dispatcher thread
-                let result =
-                    std::panic::catch_unwind(AssertUnwindSafe(|| engine_ref.decide(&ctx, &qs)));
+                let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
+                    engine_ref.decide(&state, &questions)
+                }));
 
                 let send_res = match result {
                     Ok(inference_res) => inference_res,

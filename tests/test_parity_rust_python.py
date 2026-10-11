@@ -1,6 +1,6 @@
 """
 Cross-runtime parity verification test between Python MLX and Rust openjev-mlx.
-Validates SPEC.md §4 conformance and numerical consistency across both runtime options.
+Validates SPEC.md and ARCHITECTURE.md conformance and numerical consistency across both runtime options.
 """
 
 import json
@@ -13,7 +13,7 @@ import pytest
 def test_rust_binary_output_schema_conformance():
     """
     Verifies that the compiled Rust native binary executes and generates
-    SPEC.md §4 compliant responses for bool, choice, and score queries.
+    SPEC.md and ARCHITECTURE.md compliant responses for choice, score, and noul questions.
     """
     port = 8099
     rust_cmd = ["./target/release/openjev-mlx"]
@@ -61,31 +61,33 @@ calibration_version = "calib-canonical-v1"
     try:
         # 2. Issue decide request
         payload = {
-            "context": "Customer ordered a keyboard on Monday. Package arrived broken on Wednesday.",
-            "queries": [
-                {
-                    "type": "bool",
-                    "id": "q_bool",
-                    "criteria": "Is customer eligible for immediate replacement?"
+            "state": "Customer ordered a keyboard on Monday. Package arrived broken on Wednesday.",
+            "model": "qwen2.5-0.5b",
+            "questions": {
+                "q_noul": {
+                    "type": "noul",
+                    "instructions": "Is customer eligible for immediate replacement?"
                 },
-                {
+                "q_choice": {
                     "type": "choice",
-                    "id": "q_choice",
-                    "criteria": "Select optimal resolution",
-                    "options": [
-                        {"id": "replace", "description": "Send new replacement"},
-                        {"id": "refund", "description": "Issue monetary refund"},
-                        {"id": "reject", "description": "Deny replacement request"}
-                    ]
+                    "instructions": "Select optimal resolution",
+                    "criteria": {
+                        "replace": "Send new replacement",
+                        "refund": "Issue monetary refund",
+                        "reject": "Deny replacement request"
+                    }
                 },
-                {
+                "q_score": {
                     "type": "score",
-                    "id": "q_score",
-                    "rubric": "Rate urgency from 1 to 5",
-                    "min": 1,
-                    "max": 5
+                    "instructions": "Rate urgency",
+                    "criteria": [
+                        "Low",
+                        "Medium",
+                        "High",
+                        "Critical"
+                    ]
                 }
-            ]
+            }
         }
         
         req_data = json.dumps(payload).encode("utf-8")
@@ -99,38 +101,37 @@ calibration_version = "calib-canonical-v1"
             assert response.status == 200
             data = json.loads(response.read().decode("utf-8"))
         
-        assert data["model_version"] == "qwen2.5-0.5b"
-        assert data["calibration_version"] == "calib-canonical-v1"
-        assert "metrics" in data and "latency_ms" in data["metrics"]
+        assert data["model"] == "qwen2.5-0.5b"
+        assert "answers" in data
+        assert "usage" in data
+        assert data["usage"]["input_tokens"] > 0
+        assert data["usage"]["output_tokens"] > 0
         
-        decisions = data["decisions"]
-        assert len(decisions) == 3
+        answers = data["answers"]
+        assert len(answers) == 3
         
-        # Check bool
-        bool_dec = decisions[0]
-        assert bool_dec["type"] == "bool"
-        assert bool_dec["id"] == "q_bool"
-        assert isinstance(bool_dec["value"], bool)
-        assert 0.5 <= bool_dec["confidence"] <= 1.0
+        # Check noul
+        noul_ans = answers["q_noul"]
+        assert noul_ans["type"] == "noul"
+        assert 0.0 <= noul_ans["noul"] <= 1.0
         
         # Check choice
-        choice_dec = decisions[1]
-        assert choice_dec["type"] == "choice"
-        assert choice_dec["id"] == "q_choice"
-        assert choice_dec["selected"] in ["replace", "refund", "reject"]
-        assert 0.0 < choice_dec["confidence"] <= 1.0
-        dist = choice_dec["distribution"]
+        choice_ans = answers["q_choice"]
+        assert choice_ans["type"] == "choice"
+        assert choice_ans["choice"] in ["replace", "refund", "reject"]
+        assert 0.0 <= choice_ans["confidence"] <= 1.0
+        dist = choice_ans["probabilities"]
+        assert len(dist) == 3
         assert sum(dist.values()) == pytest.approx(1.0, rel=1e-3)
         
         # Check score
-        score_dec = decisions[2]
-        assert score_dec["type"] == "score"
-        assert score_dec["id"] == "q_score"
-        assert 1.0 <= score_dec["score"] <= 5.0
-        assert 1 <= score_dec["discrete_level"] <= 5
-        assert score_dec["variance"] >= 0.0
-        assert len(score_dec["distribution"]) == 5
-        assert sum(score_dec["distribution"]) == pytest.approx(1.0, rel=1e-3)
+        score_ans = answers["q_score"]
+        assert score_ans["type"] == "score"
+        assert 0.0 <= score_ans["score"] <= 3.0
+        assert 0.0 <= score_ans["confidence"] <= 1.0
+        assert len(score_ans["legend"]) == 4
+        assert len(score_ans["probabilities"]) == 4
+        assert sum(score_ans["probabilities"].values()) == pytest.approx(1.0, rel=1e-3)
         
     finally:
         proc.terminate()

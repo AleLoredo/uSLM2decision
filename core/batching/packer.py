@@ -1,6 +1,6 @@
 """
 OpenJEV Multi-Request Sequence Packer
-Implements ARCHITECTURE.md §2 and IMPLEMENTATION.md §4:
+Implements ARCHITECTURE.md §4 and §5:
 - Combines B requests (1 <= B <= 16) into an isolated multi-request sequence.
 - Construct 2D block-causal attention mask with complete inter-request isolation (-1e9 off-diagonal blocks).
 - Per-segment position IDs mapped strictly within each request boundary.
@@ -8,6 +8,7 @@ Implements ARCHITECTURE.md §2 and IMPLEMENTATION.md §4:
 
 from typing import List, Dict, Any, Callable, Tuple
 from dataclasses import dataclass
+import json
 import numpy as np
 import mlx.core as mx
 
@@ -31,18 +32,24 @@ class PackedBatch:
     position_ids: mx.array
     query_locations: List[QueryLocation]
 
-def extract_query_text(q: Dict[str, Any]) -> str:
-    """Extracts text representation from query dictionary."""
+def serialize_state_to_text(state: Any) -> str:
+    """Serializes state (string or structured JSON) to text for tokenization."""
+    if isinstance(state, str):
+        return state
+    if isinstance(state, (dict, list)):
+        return json.dumps(state, ensure_ascii=False, indent=2)
+    return str(state)
+
+def extract_question_text(q: Dict[str, Any]) -> str:
+    """Extracts text representation from question dictionary."""
+    instructions = q.get("instructions", "")
     q_type = q.get("type")
-    if q_type == "bool":
-        return q.get("criteria", "")
-    elif q_type == "choice":
-        criteria = q.get("criteria", "")
-        opts_text = " ".join(opt.get("description", "") for opt in q.get("options", []))
-        return f"{criteria} {opts_text}".strip()
-    elif q_type == "score":
-        return q.get("rubric", "")
-    return ""
+    if q_type == "noul":
+        crit = q.get("criteria", "")
+        if crit:
+            return f"{instructions} {crit}".strip()
+        return instructions
+    return instructions
 
 def pack_requests(
     requests: List[QueuedRequest],
@@ -64,10 +71,16 @@ def pack_requests(
     global_offset = 0
 
     for req_idx, req in enumerate(requests):
-        s_tokens = tokenize_fn(req.context)
+        s_text = serialize_state_to_text(req.state)
+        s_tokens = tokenize_fn(s_text)
         s_len = max(len(s_tokens), 1)
 
-        q_tokens_list = [tokenize_fn(extract_query_text(q)) for q in req.queries]
+        # Questions is a Dict[str, Dict[str, Any]]
+        questions_items = list(req.questions.items()) if isinstance(req.questions, dict) else [
+            (q.get("id", f"q_{i}"), q) for i, q in enumerate(req.questions)
+        ]
+
+        q_tokens_list = [tokenize_fn(extract_question_text(q_dict)) for _, q_dict in questions_items]
         q_lens = [max(len(qt), 1) for qt in q_tokens_list]
         req_total = s_len + sum(q_lens)
 
@@ -86,15 +99,14 @@ def pack_requests(
         all_tokens.extend(s_tokens or [1])
         all_pos_ids.extend(range(s_len))
 
-        # Append queries tokens & position IDs
+        # Append questions tokens & position IDs
         current_q_start = global_offset + s_len
-        for q_idx, (q_dict, q_tokens, q_len) in enumerate(zip(req.queries, q_tokens_list, q_lens)):
+        for q_idx, ((q_id, q_dict), q_tokens, q_len) in enumerate(zip(questions_items, q_tokens_list, q_lens)):
             actual_q_tokens = q_tokens or [1]
             all_tokens.extend(actual_q_tokens)
             for i in range(q_len):
                 all_pos_ids.append(s_len + i)
 
-            q_id = q_dict.get("id", f"q_{req_idx}_{q_idx}")
             last_idx = current_q_start + q_len - 1
             query_locations.append(QueryLocation(
                 req_index=req_idx,

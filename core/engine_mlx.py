@@ -119,29 +119,22 @@ class MLXInferenceEngine(BaseInferenceEngine):
             return q.get("rubric", "")
         return ""
 
-    def decide(self, context: str, queries: Union[List[Dict[str, Any]], Dict[str, Dict[str, Any]]]) -> List[Dict[str, Any]]:
+    def decide(self, state: Union[str, Dict[str, Any], List[Any]], questions: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
         """
         Executes real decision forward pass with block-causal attention masking and
-        per-segment position IDs.
+        per-segment position IDs conforming to ARCHITECTURE.md.
         """
         if not self._is_ready:
             raise RuntimeError("Engine is not warmed up. Call load_model() first.")
 
-        if isinstance(queries, dict):
-            normalized = []
-            for q_id, q_data in queries.items():
-                if isinstance(q_data, dict):
-                    item = dict(q_data)
-                    item.setdefault("id", str(q_id))
-                    normalized.append(item)
-                else:
-                    normalized.append(q_data)
-            queries = normalized
+        from core.batching.packer import serialize_state_to_text, extract_question_text
 
-        s_tokens = self._tokenize(context)
+        state_text = serialize_state_to_text(state)
+        s_tokens = self._tokenize(state_text)
         s_len = max(len(s_tokens), 1)
 
-        q_tokens_list = [self._tokenize(self._get_query_text(q)) for q in queries]
+        questions_items = list(questions.items())
+        q_tokens_list = [self._tokenize(extract_question_text(q_dict)) for _, q_dict in questions_items]
         q_lens = [max(len(qt), 1) for qt in q_tokens_list]
 
         # 1. Construct Additive Block-Causal Mask and Segment Position IDs
@@ -149,11 +142,10 @@ class MLXInferenceEngine(BaseInferenceEngine):
         pos_ids = create_segment_position_ids(s_len, q_lens)
         mx.eval(mask, pos_ids)
 
-        # 2. Extract pooled query representations h_Qk for each query
-        decisions = []
-        for idx, (q, q_tokens) in enumerate(zip(queries, q_tokens_list)):
+        answers: Dict[str, Any] = {}
+
+        for idx, ((q_id, q), q_tokens) in enumerate(zip(questions_items, q_tokens_list)):
             q_type = q.get("type")
-            q_id = q.get("id", f"q_{idx}")
 
             # Derive pooled query vector h_Qk in R^hidden_dim
             if self.backbone is not None:
@@ -170,27 +162,25 @@ class MLXInferenceEngine(BaseInferenceEngine):
                 h_q_np = np.random.normal(0, 1.0 / math.sqrt(self.hidden_dim), size=(1, self.hidden_dim)).astype(np.float32)
                 h_q = mx.array(h_q_np)
 
-            if q_type == "bool":
-                values, confidences, _ = self.bool_head(h_q)
-                mx.eval(values, confidences)
-                decisions.append({
-                    "id": q_id,
-                    "type": "bool",
-                    "value": bool(values[0].item()),
-                    "confidence": float(confidences[0].item())
-                })
+            if q_type == "noul":
+                values, confidences, p_true = self.bool_head(h_q)
+                mx.eval(p_true)
+                answers[q_id] = {
+                    "type": "noul",
+                    "noul": round(float(p_true[0].item()), 4)
+                }
             elif q_type == "choice":
-                options = q.get("options", [])
-                if not options:
-                    raise ValueError(f"Query '{q_id}' of type 'choice' requires non-empty options")
+                criteria = q.get("criteria", {})
+                if not criteria:
+                    raise ValueError(f"Question '{q_id}' of type 'choice' requires non-empty criteria map")
 
-                # Compute option embeddings e_{C_i} per ARCHITECTURE.md §3.2
+                options = [{"id": opt_id, "description": opt_desc} for opt_id, opt_desc in criteria.items()]
                 num_opts = len(options)
+
                 if self.backbone is not None:
                     opt_vectors = []
                     for opt in options:
-                        opt_text = opt.get("description", opt.get("id", ""))
-                        opt_tokens = self._tokenize(opt_text) or [1]
+                        opt_tokens = self._tokenize(opt["description"]) or [1]
                         opt_hidden = self.backbone(mx.array([opt_tokens]))
                         opt_vectors.append(opt_hidden[:, -1, :].astype(mx.float32))
                     e_options = mx.concatenate(opt_vectors, axis=0)
@@ -207,57 +197,66 @@ class MLXInferenceEngine(BaseInferenceEngine):
                 sel = int(sel_idx[0].item())
                 selected_id = options[sel]["id"]
 
-                decisions.append({
-                    "id": q_id,
+                answers[q_id] = {
                     "type": "choice",
-                    "selected": selected_id,
-                    "confidence": float(conf[0].item()),
-                    "distribution": {opt["id"]: p for opt, p in zip(options, probs_list)}
-                })
+                    "choice": selected_id,
+                    "confidence": round(float(conf[0].item()), 4),
+                    "probabilities": {opt["id"]: round(p, 4) for opt, p in zip(options, probs_list)}
+                }
             elif q_type == "score":
-                min_val = q.get("min", 1)
-                max_val = q.get("max", 5)
+                criteria = q.get("criteria", [])
+                if not criteria or len(criteria) < 2:
+                    raise ValueError(f"Question '{q_id}' of type 'score' requires criteria list with at least 2 levels")
 
-                s_out = self.score_head(h_q, min_val=min_val, max_val=max_val)
-                mx.eval(
-                    s_out["score"],
-                    s_out["discrete_level"],
-                    s_out["confidence"],
-                    s_out["variance"],
-                    s_out["distribution"]
-                )
+                num_levels = len(criteria)
+                s_out = self.score_head(h_q, min_val=0, max_val=num_levels - 1)
+                mx.eval(s_out["score"], s_out["distribution"])
 
-                decisions.append({
-                    "id": q_id,
+                score_val = float(s_out["score"][0].item())
+                legend_map = {str(i): desc for i, desc in enumerate(criteria)}
+                probs_list = [float(p) for p in s_out["distribution"][0].tolist()][:num_levels]
+                sum_p = sum(probs_list) or 1.0
+                probs_dict = {str(i): round(p / sum_p, 4) for i, p in enumerate(probs_list)}
+                confidence_val = max(probs_dict.values())
+
+                answers[q_id] = {
                     "type": "score",
-                    "score": float(s_out["score"][0].item()),
-                    "discrete_level": int(s_out["discrete_level"][0].item()),
-                    "confidence": float(s_out["confidence"][0].item()),
-                    "variance": float(s_out["variance"][0].item()),
-                    "distribution": [float(p) for p in s_out["distribution"][0].tolist()]
-                })
+                    "score": round(score_val, 2),
+                    "confidence": round(confidence_val, 4),
+                    "legend": legend_map,
+                    "probabilities": probs_dict
+                }
             else:
-                raise ValueError(f"Unsupported query type '{q_type}'")
+                raise ValueError(f"Unsupported question type '{q_type}'")
 
-        return decisions
+        input_tokens = len(s_tokens) + sum(len(qt) for qt in q_tokens_list)
+        import json
+        output_tokens = len(self._tokenize(json.dumps(answers)))
 
-    def decide_batch(self, requests: List[Any]) -> List[List[Dict[str, Any]]]:
+        return {
+            "answers": answers,
+            "usage": {
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens
+            }
+        }
+
+    def decide_batch(self, requests: List[Any]) -> List[Dict[str, Any]]:
         """
         Executes a batch of requests in a forward pass on Metal GPU.
-        When real transformer backbone is loaded, processes queries through the Metal GPU backbone.
+        When real transformer backbone is loaded, processes questions through the Metal GPU backbone.
         """
         if not self._is_ready:
             raise RuntimeError("Engine is not warmed up. Call load_model() first.")
         if not requests:
             return []
 
-        if self.backbone is not None:
-            results = []
-            for req in requests:
-                ctx = getattr(req, "context", None) if hasattr(req, "context") else (req.get("context", "") if isinstance(req, dict) else "")
-                queries = getattr(req, "queries", None) if hasattr(req, "queries") else (req.get("queries", []) if isinstance(req, dict) else [])
-                results.append(self.decide(ctx, queries))
-            return results
+        results = []
+        for req in requests:
+            st = getattr(req, "state", None) if hasattr(req, "state") else req.get("state", "")
+            qs = getattr(req, "questions", None) if hasattr(req, "questions") else req.get("questions", {})
+            results.append(self.decide(st, qs))
+        return results
 
         from core.batching.packer import pack_requests
         packed = pack_requests(requests, tokenize_fn=self._tokenize, state_causal=True)

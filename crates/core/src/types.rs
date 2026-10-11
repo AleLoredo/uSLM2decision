@@ -1,170 +1,106 @@
-//! API data structures conforming to SPEC.md §4.
+//! API data structures conforming to SPEC.md §4 and ARCHITECTURE.md.
 
-use serde::de::{self, Deserializer};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DecideRequest {
-    pub context: String,
-    #[serde(deserialize_with = "deserialize_queries")]
-    pub queries: Vec<Query>,
+    pub state: Value,
+    #[serde(default)]
+    pub model: Option<String>,
+    pub questions: HashMap<String, Question>,
 }
 
-fn deserialize_queries<'de, D>(deserializer: D) -> Result<Vec<Query>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let val = Value::deserialize(deserializer)?;
-    match val {
-        Value::Array(arr) => {
-            serde_json::from_value(Value::Array(arr)).map_err(de::Error::custom)
+impl DecideRequest {
+    /// Serializes state to canonical text representation for tokenization.
+    pub fn serialize_state(&self) -> String {
+        match &self.state {
+            Value::String(s) => s.clone(),
+            other => serde_json::to_string_pretty(other).unwrap_or_else(|_| other.to_string()),
         }
-        Value::Object(map) => {
-            let mut queries = Vec::new();
-            for (id, mut q_val) in map {
-                if let Value::Object(ref mut q_map) = q_val {
-                    if !q_map.contains_key("id") {
-                        q_map.insert("id".to_string(), Value::String(id));
-                    }
-                }
-                let query: Query = serde_json::from_value(q_val).map_err(de::Error::custom)?;
-                queries.push(query);
-            }
-            Ok(queries)
-        }
-        _ => Err(de::Error::custom("queries must be a list or a map of query objects")),
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
-pub enum Query {
-    #[serde(rename = "bool")]
-    Bool {
-        #[serde(default)]
-        id: Option<String>,
-        criteria: String,
-    },
+pub enum Question {
     #[serde(rename = "choice")]
     Choice {
-        #[serde(default)]
-        id: Option<String>,
-        #[serde(default)]
-        criteria: Option<String>,
-        options: Vec<ChoiceOption>,
+        instructions: String,
+        criteria: HashMap<String, String>,
     },
     #[serde(rename = "score")]
     Score {
+        instructions: String,
+        criteria: Vec<String>,
+    },
+    #[serde(rename = "noul")]
+    Noul {
+        instructions: String,
         #[serde(default)]
-        id: Option<String>,
-        rubric: String,
-        #[serde(default = "default_min_score")]
-        min: i32,
-        #[serde(default = "default_max_score")]
-        max: i32,
+        criteria: Option<String>,
     },
 }
 
-fn default_min_score() -> i32 {
-    1
-}
-
-fn default_max_score() -> i32 {
-    5
-}
-
-impl Query {
-    pub fn id(&self) -> Option<&str> {
-        match self {
-            Query::Bool { id, .. } => id.as_deref(),
-            Query::Choice { id, .. } => id.as_deref(),
-            Query::Score { id, .. } => id.as_deref(),
-        }
-    }
-
+impl Question {
     pub fn primitive_type(&self) -> &'static str {
         match self {
-            Query::Bool { .. } => "bool",
-            Query::Choice { .. } => "choice",
-            Query::Score { .. } => "score",
+            Question::Choice { .. } => "choice",
+            Question::Score { .. } => "score",
+            Question::Noul { .. } => "noul",
         }
     }
 
     pub fn text_content(&self) -> String {
         match self {
-            Query::Bool { criteria, .. } => criteria.clone(),
-            Query::Choice {
-                criteria, options, ..
+            Question::Choice { instructions, .. } => instructions.clone(),
+            Question::Score { instructions, .. } => instructions.clone(),
+            Question::Noul {
+                instructions,
+                criteria,
             } => {
-                let crit = criteria.as_deref().unwrap_or("");
-                let opts = options
-                    .iter()
-                    .map(|o| o.description.as_str())
-                    .collect::<Vec<_>>()
-                    .join(" ");
-                format!("{} {}", crit, opts).trim().to_string()
+                if let Some(ref c) = criteria {
+                    format!("{} {}", instructions, c).trim().to_string()
+                } else {
+                    instructions.clone()
+                }
             }
-            Query::Score { rubric, .. } => rubric.clone(),
         }
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ChoiceOption {
-    pub id: String,
-    pub description: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
-pub enum Decision {
-    #[serde(rename = "bool")]
-    Bool {
-        id: String,
-        value: bool,
-        confidence: f32,
-    },
+pub enum Answer {
     #[serde(rename = "choice")]
     Choice {
-        id: String,
-        selected: String,
+        choice: String,
         confidence: f32,
-        distribution: HashMap<String, f32>,
+        probabilities: HashMap<String, f32>,
     },
     #[serde(rename = "score")]
     Score {
-        id: String,
         score: f32,
-        discrete_level: i32,
         confidence: f32,
-        variance: f32,
-        distribution: Vec<f32>,
+        legend: HashMap<String, String>,
+        probabilities: HashMap<String, f32>,
     },
+    #[serde(rename = "noul")]
+    Noul { noul: f32 },
 }
 
-impl Decision {
-    pub fn id(&self) -> &str {
-        match self {
-            Decision::Bool { id, .. } => id,
-            Decision::Choice { id, .. } => id,
-            Decision::Score { id, .. } => id,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RequestMetrics {
-    pub latency_ms: f64,
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct UsageInfo {
+    pub input_tokens: usize,
+    pub output_tokens: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DecideResponse {
-    pub model_version: String,
-    pub calibration_version: String,
-    pub decisions: Vec<Decision>,
-    pub metrics: RequestMetrics,
+    pub model: String,
+    pub answers: HashMap<String, Answer>,
+    pub usage: UsageInfo,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -178,34 +114,77 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_deserialize_decide_request_from_array() {
+    fn test_deserialize_canonical_decide_request() {
         let json_str = r#"{
-            "context": "test context",
-            "queries": [
-                {"type": "bool", "id": "q1", "criteria": "is valid"}
-            ]
-        }"#;
-        let req: DecideRequest = serde_json::from_str(json_str).expect("failed to parse array");
-        assert_eq!(req.queries.len(), 1);
-        assert_eq!(req.queries[0].id(), Some("q1"));
-    }
-
-    #[test]
-    fn test_deserialize_decide_request_from_map() {
-        let json_str = r#"{
-            "context": "test context",
-            "queries": {
-                "q_bool": {
-                    "type": "bool",
-                    "criteria": "is valid"
+            "state": "Hi, I've been trying to connect my Stripe account for 3 days and the integration keeps failing. I'm losing sales. Please help ASAP.",
+            "model": "jev-latest",
+            "questions": {
+                "department": {
+                    "type": "choice",
+                    "instructions": "Which team should handle this",
+                    "criteria": {
+                        "billing": "Payment or subscription issues",
+                        "technical": "Bugs or integration problems",
+                        "sales": "Pricing or account questions"
+                    }
                 },
-                "q_score": {
+                "frustration": {
                     "type": "score",
-                    "rubric": "1 to 5"
+                    "instructions": "How frustrated the customer appears",
+                    "criteria": [
+                        "Calm, just stating facts",
+                        "Frustrated but civil",
+                        "Very angry, strong language"
+                    ]
+                },
+                "is_urgent": {
+                    "type": "noul",
+                    "instructions": "The message conveys urgency or time-sensitivity"
                 }
             }
         }"#;
-        let req: DecideRequest = serde_json::from_str(json_str).expect("failed to parse map");
-        assert_eq!(req.queries.len(), 2);
+
+        let req: DecideRequest =
+            serde_json::from_str(json_str).expect("failed to parse canonical request");
+        assert_eq!(req.questions.len(), 3);
+        assert_eq!(req.model.as_deref(), Some("jev-latest"));
+
+        let q_dept = req
+            .questions
+            .get("department")
+            .expect("department not found");
+        assert_eq!(q_dept.primitive_type(), "choice");
+
+        let q_frust = req
+            .questions
+            .get("frustration")
+            .expect("frustration not found");
+        assert_eq!(q_frust.primitive_type(), "score");
+
+        let q_urgent = req.questions.get("is_urgent").expect("is_urgent not found");
+        assert_eq!(q_urgent.primitive_type(), "noul");
+    }
+
+    #[test]
+    fn test_deserialize_structured_json_state() {
+        let json_str = r#"{
+            "state": {
+                "user_id": 1234,
+                "msg": "cannot connect stripe"
+            },
+            "questions": {
+                "is_urgent": {
+                    "type": "noul",
+                    "instructions": "urgent message"
+                }
+            }
+        }"#;
+
+        let req: DecideRequest =
+            serde_json::from_str(json_str).expect("failed to parse structured state");
+        assert_eq!(req.questions.len(), 1);
+        let serialized = req.serialize_state();
+        assert!(serialized.contains("user_id"));
+        assert!(serialized.contains("1234"));
     }
 }

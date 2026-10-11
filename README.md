@@ -158,7 +158,7 @@ PORT=9000 HOST=127.0.0.1 ./run.sh
 ### Running Tests
 
 ```bash
-# Run Python test suite (49 unit and integration tests)
+# Run Python test suite (51 unit and integration tests)
 source .venv/bin/activate
 PYTHONPATH=. pytest tests/ -v
 
@@ -174,17 +174,30 @@ cargo test --workspace
 curl -X POST http://localhost:8000/v1/decide \
   -H "Content-Type: application/json" \
   -d '{
-    "context": "Customer requested account cancellation due to price increase.",
-    "queries": {
-      "is_churn_risk": {
-        "type": "bool",
-        "criteria": "Does customer express churn intent?"
+    "state": "Hi, I'\''ve been trying to connect my Stripe account for 3 days and the integration keeps failing. I'\''m losing sales. Please help ASAP.",
+    "model": "jev-latest",
+    "questions": {
+      "department": {
+        "type": "choice",
+        "instructions": "Which team should handle this",
+        "criteria": {
+          "billing": "Payment or subscription issues",
+          "technical": "Bugs or integration problems",
+          "sales": "Pricing or account questions"
+        }
       },
-      "urgency_score": {
+      "frustration": {
         "type": "score",
-        "min": 1,
-        "max": 5,
-        "rubric": "1=low, 5=critical urgency"
+        "instructions": "How frustrated the customer appears",
+        "criteria": [
+          "Calm, just stating facts",
+          "Frustrated but civil",
+          "Very angry, strong language"
+        ]
+      },
+      "is_urgent": {
+        "type": "noul",
+        "instructions": "The message conveys urgency or time-sensitivity"
       }
     }
   }'
@@ -194,25 +207,41 @@ curl -X POST http://localhost:8000/v1/decide \
 
 ```json
 {
-  "spec_version": "2.0.0",
-  "model_version": "openjev-0.5b-v1",
-  "calibration_version": "calib-focal-brier-v1",
-  "latency_ms": 14.2,
-  "usage": {
-    "input_tokens": 18
-  },
-  "decisions": {
-    "is_churn_risk": {
-      "value": true,
-      "confidence": 0.942
+  "model": "jev-1.13.0",
+  "answers": {
+    "department": {
+      "type": "choice",
+      "choice": "technical",
+      "confidence": 0.78,
+      "probabilities": {
+        "technical": 0.85,
+        "sales": 0.0,
+        "billing": 0.15
+      }
     },
-    "urgency_score": {
-      "score": 4.21,
-      "discrete_level": 4,
-      "confidence": 0.885,
-      "variance": 0.35,
-      "distribution": [0.01, 0.02, 0.08, 0.54, 0.35]
+    "frustration": {
+      "type": "score",
+      "score": 1.0,
+      "confidence": 1.0,
+      "legend": {
+        "0": "Calm, just stating facts",
+        "1": "Frustrated but civil",
+        "2": "Very angry, strong language"
+      },
+      "probabilities": {
+        "0": 0.0,
+        "1": 1.0,
+        "2": 0.0
+      }
+    },
+    "is_urgent": {
+      "type": "noul",
+      "noul": 1.0
     }
+  },
+  "usage": {
+    "input_tokens": 392,
+    "output_tokens": 65
   }
 }
 ```

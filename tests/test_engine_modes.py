@@ -1,5 +1,6 @@
 """
 Unit and Integration tests for OpenJEV Engine Modes (mock & real MLX)
+Conforming to System 1 architecture (SPEC.md and ARCHITECTURE.md)
 """
 
 import os
@@ -11,28 +12,31 @@ from core.engine_mock import MockInferenceEngine
 from core.engine_mlx import MLXInferenceEngine
 from core.model_scanner import init_canonical_heads
 
-SAMPLE_QUERIES = [
-    {
-        "id": "q_bool",
-        "type": "bool",
-        "criteria": "Is the user requesting service cancellation?"
+SAMPLE_QUESTIONS = {
+    "is_cancellation": {
+        "type": "noul",
+        "instructions": "Is the user requesting service cancellation?"
     },
-    {
-        "id": "q_choice",
+    "department": {
         "type": "choice",
-        "options": [
-            {"id": "opt_billing", "description": "Billing inquiry"},
-            {"id": "opt_tech", "description": "Technical support"}
-        ]
+        "instructions": "Select handling department",
+        "criteria": {
+            "opt_billing": "Billing inquiry",
+            "opt_tech": "Technical support"
+        }
     },
-    {
-        "id": "q_score",
+    "urgency": {
         "type": "score",
-        "min": 1,
-        "max": 5,
-        "rubric": "Urgency rating from 1 to 5"
+        "instructions": "Urgency rating from 0 to 4",
+        "criteria": [
+            "Level 0 - lowest",
+            "Level 1 - low",
+            "Level 2 - medium",
+            "Level 3 - high",
+            "Level 4 - critical"
+        ]
     }
-]
+}
 
 def test_mock_engine():
     cfg = OpenJEVConfig(mode="mock")
@@ -43,11 +47,14 @@ def test_mock_engine():
     engine.load_model()
     assert engine.is_ready()
 
-    decisions = engine.decide("Context text", SAMPLE_QUERIES)
-    assert len(decisions) == 3
-    assert decisions[0]["type"] == "bool"
-    assert decisions[1]["type"] == "choice"
-    assert decisions[2]["type"] == "score"
+    res = engine.decide("Context text", SAMPLE_QUESTIONS)
+    assert "answers" in res
+    assert "usage" in res
+    answers = res["answers"]
+    assert len(answers) == 3
+    assert answers["is_cancellation"]["type"] == "noul"
+    assert answers["department"]["type"] == "choice"
+    assert answers["urgency"]["type"] == "score"
 
 def test_mlx_engine_real_mode():
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -70,24 +77,26 @@ def test_mlx_engine_real_mode():
         engine.load_model()
         assert engine.is_ready()
 
-        decisions = engine.decide("Account cancellation requested due to price", SAMPLE_QUERIES)
-        assert len(decisions) == 3
+        res = engine.decide("Account cancellation requested due to price", SAMPLE_QUESTIONS)
+        assert "answers" in res
+        assert "usage" in res
+        answers = res["answers"]
+        assert len(answers) == 3
 
-        # Bool check
-        d_bool = decisions[0]
-        assert d_bool["type"] == "bool"
-        assert isinstance(d_bool["value"], bool)
-        assert 0.5 <= d_bool["confidence"] <= 1.0
+        # Noul check
+        ans_noul = answers["is_cancellation"]
+        assert ans_noul["type"] == "noul"
+        assert 0.0 <= ans_noul["noul"] <= 1.0
 
         # Choice check
-        d_choice = decisions[1]
-        assert d_choice["type"] == "choice"
-        assert d_choice["selected"] in ["opt_billing", "opt_tech"]
-        assert pytest.approx(sum(d_choice["distribution"].values()), abs=1e-5) == 1.0
+        ans_choice = answers["department"]
+        assert ans_choice["type"] == "choice"
+        assert ans_choice["choice"] in ["opt_billing", "opt_tech"]
+        assert pytest.approx(sum(ans_choice["probabilities"].values()), abs=1e-4) == 1.0
 
         # Score check
-        d_score = decisions[2]
-        assert d_score["type"] == "score"
-        assert 1.0 <= d_score["score"] <= 5.0
-        assert 1 <= d_score["discrete_level"] <= 5
-        assert d_score["variance"] >= 0.0
+        ans_score = answers["urgency"]
+        assert ans_score["type"] == "score"
+        assert 0.0 <= ans_score["score"] <= 4.0
+        assert len(ans_score["legend"]) == 5
+        assert pytest.approx(sum(ans_score["probabilities"].values()), abs=1e-4) == 1.0

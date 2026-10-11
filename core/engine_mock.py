@@ -1,10 +1,12 @@
 """
 OpenJEV Mock Inference Engine
 Provides rapid, deterministic or synthetic decisions for integration tests and CI without requiring model weights.
+Conforms to SPEC.md and ARCHITECTURE.md.
 """
 
+import json
 import numpy as np
-from typing import List, Dict, Any
+from typing import Dict, Any, Union
 from core.engine import BaseInferenceEngine
 from core.config import OpenJEVConfig
 
@@ -29,64 +31,70 @@ class MockInferenceEngine(BaseInferenceEngine):
     def calibration_version(self) -> str:
         return self._calibration_version
 
-    def decide(self, context: str, queries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        decisions = []
-        for idx, q in enumerate(queries):
+    def decide(self, state: Union[str, Dict[str, Any], list], questions: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+        answers = {}
+        for q_id, q in questions.items():
             q_type = q.get("type")
-            q_id = q.get("id", f"q_{idx}")
 
-            if q_type == "bool":
+            if q_type == "noul":
                 p_true = float(np.random.uniform(0.1, 0.9))
-                val = p_true > 0.5
-                conf = p_true if val else 1.0 - p_true
-                decisions.append({
-                    "id": q_id,
-                    "type": "bool",
-                    "value": val,
-                    "confidence": conf
-                })
+                answers[q_id] = {
+                    "type": "noul",
+                    "noul": round(p_true, 4)
+                }
             elif q_type == "choice":
-                options = q.get("options", [])
-                if not options:
-                    raise ValueError(f"Query '{q_id}' of type 'choice' requires options")
+                criteria = q.get("criteria", {})
+                if not criteria:
+                    raise ValueError(f"Question '{q_id}' of type 'choice' requires non-empty criteria map")
 
-                raw_logits = np.random.normal(0, 1, size=len(options))
+                opt_ids = list(criteria.keys())
+                raw_logits = np.random.normal(0, 1, size=len(opt_ids))
                 exp_logits = np.exp(raw_logits - np.max(raw_logits))
                 probs = exp_logits / np.sum(exp_logits)
                 sel_idx = int(np.argmax(probs))
 
-                decisions.append({
-                    "id": q_id,
+                answers[q_id] = {
                     "type": "choice",
-                    "selected": options[sel_idx]["id"],
-                    "confidence": float(probs[sel_idx]),
-                    "distribution": {opt["id"]: float(p) for opt, p in zip(options, probs)}
-                })
+                    "choice": opt_ids[sel_idx],
+                    "confidence": round(float(probs[sel_idx]), 4),
+                    "probabilities": {opt: round(float(p), 4) for opt, p in zip(opt_ids, probs)}
+                }
             elif q_type == "score":
-                min_val = q.get("min", 1)
-                max_val = q.get("max", 5)
-                num_levels = max_val - min_val + 1
+                criteria = q.get("criteria", [])
+                if not criteria or len(criteria) < 2:
+                    raise ValueError(f"Question '{q_id}' of type 'score' requires criteria list with at least 2 levels")
 
+                num_levels = len(criteria)
                 raw_logits = np.random.normal(0, 1, size=num_levels)
                 exp_logits = np.exp(raw_logits - np.max(raw_logits))
                 probs = exp_logits / np.sum(exp_logits)
 
-                levels = np.arange(min_val, max_val + 1)
+                levels = np.arange(num_levels)
                 score = float(np.sum(probs * levels))
-                discrete_level = int(np.clip(np.round(score), min_val, max_val))
-                variance = float(np.sum(probs * ((levels - score) ** 2)))
-                confidence = float(probs[discrete_level - min_val])
+                discrete_level = int(np.clip(np.round(score), 0, num_levels - 1))
+                confidence = float(probs[discrete_level])
 
-                decisions.append({
-                    "id": q_id,
+                legend_map = {str(i): desc for i, desc in enumerate(criteria)}
+                probs_dict = {str(i): round(float(p), 4) for i, p in enumerate(probs)}
+
+                answers[q_id] = {
                     "type": "score",
-                    "score": score,
-                    "discrete_level": discrete_level,
-                    "confidence": confidence,
-                    "variance": variance,
-                    "distribution": [float(p) for p in probs]
-                })
+                    "score": round(score, 2),
+                    "confidence": round(confidence, 4),
+                    "legend": legend_map,
+                    "probabilities": probs_dict
+                }
             else:
-                raise ValueError(f"Unsupported query type '{q_type}'")
+                raise ValueError(f"Unsupported question type '{q_type}'")
 
-        return decisions
+        state_str = state if isinstance(state, str) else json.dumps(state)
+        input_tokens = len(state_str.split()) + sum(len(str(q).split()) for q in questions.values())
+        output_tokens = len(json.dumps(answers).split())
+
+        return {
+            "answers": answers,
+            "usage": {
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens
+            }
+        }

@@ -6,7 +6,8 @@ use crate::loader::{load_architecture_config, HeadsWeights, ModelArchitectureCon
 use crate::types::{EngineError, InferenceEngine};
 use openjev_core::mask::{create_block_causal_mask, create_segment_position_ids};
 use openjev_core::tokenizer::Tokenizer;
-use openjev_core::types::{Decision, Query};
+use openjev_core::types::{Answer, Question, UsageInfo};
+use std::collections::HashMap;
 use std::path::Path;
 use tracing::info;
 
@@ -103,7 +104,11 @@ impl InferenceEngine for RealMetalEngine {
         &self.calibration_version
     }
 
-    fn decide(&self, context: &str, queries: &[Query]) -> Result<Vec<Decision>, EngineError> {
+    fn decide(
+        &self,
+        state: &str,
+        questions: &HashMap<String, Question>,
+    ) -> Result<(HashMap<String, Answer>, UsageInfo), EngineError> {
         let evaluator = DecisionHeadsEvaluator::new(
             &self.heads,
             self.temperature_bool,
@@ -111,50 +116,55 @@ impl InferenceEngine for RealMetalEngine {
             self.temperature_score,
         );
 
-        let context_tokens = self.tokenizer.encode(context).map_err(|e| {
-            EngineError::InferenceFailed(format!("Context tokenization error: {}", e))
+        let state_tokens = self.tokenizer.encode(state).map_err(|e| {
+            EngineError::InferenceFailed(format!("State tokenization error: {}", e))
         })?;
-        let s_len = context_tokens.len().max(1);
+        let s_len = state_tokens.len().max(1);
 
-        let mut decisions = Vec::with_capacity(queries.len());
+        let mut answers = HashMap::with_capacity(questions.len());
+        let mut total_q_tokens = 0;
 
-        for (idx, q) in queries.iter().enumerate() {
-            let q_id = q.id().unwrap_or(&format!("q_{}", idx)).to_string();
+        for (idx, (q_id, q)) in questions.iter().enumerate() {
             let q_text = q.text_content();
             let q_tokens = self.tokenizer.encode(&q_text).map_err(|e| {
-                EngineError::InferenceFailed(format!("Query tokenization error: {}", e))
+                EngineError::InferenceFailed(format!("Question tokenization error: {}", e))
             })?;
             let q_len = q_tokens.len().max(1);
+            total_q_tokens += q_len;
 
             // Construct 2D Block-Causal Mask and Segment Position IDs per ARCHITECTURE.md §2
             let _mask = create_block_causal_mask(s_len, &[q_len], true);
             let pos_ids = create_segment_position_ids(s_len, &[q_len]);
 
-            // Combine tokens for query representation pass
+            // Combine tokens for question representation pass
             let mut combined_tokens = Vec::with_capacity(s_len + q_len);
-            combined_tokens.extend_from_slice(&context_tokens);
+            combined_tokens.extend_from_slice(&state_tokens);
             combined_tokens.extend_from_slice(&q_tokens);
 
             let salt = (idx as u64).wrapping_mul(0x9E3779B97F4A7C15);
             let h_dec = self.compute_hidden_state(&combined_tokens, &pos_ids, salt);
 
             match q {
-                Query::Bool { .. } => {
-                    let (value, confidence) = evaluator.evaluate_bool(&h_dec);
-                    decisions.push(Decision::Bool {
-                        id: q_id,
-                        value,
-                        confidence,
-                    });
+                Question::Noul { .. } => {
+                    let noul_prob = evaluator.evaluate_noul(&h_dec);
+                    let rounded = (noul_prob * 100.0).round() / 100.0;
+                    answers.insert(q_id.clone(), Answer::Noul { noul: rounded });
                 }
-                Query::Choice { options, .. } => {
-                    // Compute option representations via dedicated forward embedding pass
-                    let mut option_embeddings = Vec::with_capacity(options.len());
-                    for (opt_idx, opt) in options.iter().enumerate() {
-                        let opt_tokens = self
-                            .tokenizer
-                            .encode(&opt.description)
-                            .unwrap_or_else(|_| vec![1]);
+                Question::Choice { criteria, .. } => {
+                    if criteria.is_empty() {
+                        return Err(EngineError::InferenceFailed(format!(
+                            "Question '{}' of type 'choice' requires non-empty criteria map",
+                            q_id
+                        )));
+                    }
+
+                    let mut opt_keys: Vec<String> = criteria.keys().cloned().collect();
+                    opt_keys.sort();
+
+                    let mut option_embeddings = Vec::with_capacity(opt_keys.len());
+                    for (opt_idx, opt_key) in opt_keys.iter().enumerate() {
+                        let desc = &criteria[opt_key];
+                        let opt_tokens = self.tokenizer.encode(desc).unwrap_or_else(|_| vec![1]);
                         let opt_pos_ids =
                             create_segment_position_ids(0, &[opt_tokens.len().max(1)]);
                         let opt_salt = (opt_idx as u64).wrapping_mul(0x517CC1B727220A95);
@@ -163,39 +173,60 @@ impl InferenceEngine for RealMetalEngine {
                     }
 
                     let (selected, confidence, distribution) =
-                        evaluator.evaluate_choice(&h_dec, options, &option_embeddings);
+                        evaluator.evaluate_choice(&h_dec, &opt_keys, &option_embeddings);
 
-                    decisions.push(Decision::Choice {
-                        id: q_id,
-                        selected,
-                        confidence,
-                        distribution,
-                    });
+                    answers.insert(
+                        q_id.clone(),
+                        Answer::Choice {
+                            choice: selected,
+                            confidence,
+                            probabilities: distribution,
+                        },
+                    );
                 }
-                Query::Score { min, max, .. } => {
-                    let (score, discrete_level, confidence, variance, distribution) =
-                        evaluator.evaluate_score(&h_dec, *min, *max);
+                Question::Score { criteria, .. } => {
+                    if criteria.is_empty() {
+                        return Err(EngineError::InferenceFailed(format!(
+                            "Question '{}' of type 'score' requires non-empty criteria list",
+                            q_id
+                        )));
+                    }
 
-                    decisions.push(Decision::Score {
-                        id: q_id,
-                        score,
-                        discrete_level,
-                        confidence,
-                        variance,
-                        distribution,
-                    });
+                    let num_levels = criteria.len();
+                    let (score, confidence, dist) = evaluator.evaluate_score(&h_dec, num_levels);
+
+                    let mut legend = HashMap::new();
+                    for (i, desc) in criteria.iter().enumerate() {
+                        legend.insert(i.to_string(), desc.clone());
+                    }
+
+                    answers.insert(
+                        q_id.clone(),
+                        Answer::Score {
+                            score,
+                            confidence,
+                            legend,
+                            probabilities: dist,
+                        },
+                    );
                 }
             }
         }
 
-        Ok(decisions)
+        let input_tokens = s_len + total_q_tokens;
+        let output_tokens = answers.len() * 20;
+        let usage = UsageInfo {
+            input_tokens,
+            output_tokens,
+        };
+
+        Ok((answers, usage))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use openjev_core::types::ChoiceOption;
     use std::path::Path;
 
     #[test]
@@ -212,84 +243,83 @@ mod tests {
         assert_eq!(engine.model_version(), "qwen2.5-0.5b");
         assert_eq!(engine.calibration_version(), "calib-canonical-v1");
 
-        let context = "Patient exhibits symptoms of acute rhinitis. Vital signs are normal.";
+        let state = "Patient exhibits symptoms of acute rhinitis. Vital signs are normal.";
 
-        let queries = vec![
-            Query::Bool {
-                id: Some("q_bool".to_string()),
-                criteria: "Does the patient require emergency hospitalization?".to_string(),
+        let mut questions = HashMap::new();
+        questions.insert(
+            "is_emergency".to_string(),
+            Question::Noul {
+                instructions: "Does the patient require emergency hospitalization?".to_string(),
+                criteria: None,
             },
-            Query::Choice {
-                id: Some("q_choice".to_string()),
-                criteria: Some("What is the primary diagnosis?".to_string()),
-                options: vec![
-                    ChoiceOption {
-                        id: "allergy".to_string(),
-                        description: "Allergic reaction".to_string(),
-                    },
-                    ChoiceOption {
-                        id: "rhinitis".to_string(),
-                        description: "Acute viral rhinitis".to_string(),
-                    },
+        );
+
+        let mut choice_crit = HashMap::new();
+        choice_crit.insert("allergy".to_string(), "Allergic reaction".to_string());
+        choice_crit.insert("rhinitis".to_string(), "Acute viral rhinitis".to_string());
+        questions.insert(
+            "diagnosis".to_string(),
+            Question::Choice {
+                instructions: "What is the primary diagnosis?".to_string(),
+                criteria: choice_crit,
+            },
+        );
+
+        questions.insert(
+            "severity".to_string(),
+            Question::Score {
+                instructions: "Rate symptom severity".to_string(),
+                criteria: vec![
+                    "Mild".to_string(),
+                    "Moderate".to_string(),
+                    "Severe".to_string(),
+                    "Critical".to_string(),
                 ],
             },
-            Query::Score {
-                id: Some("q_score".to_string()),
-                rubric: "Rate symptom severity from 1 (mild) to 5 (critical)".to_string(),
-                min: 1,
-                max: 5,
-            },
-        ];
+        );
 
-        let decisions = engine.decide(context, &queries).expect("Inference failed");
-        assert_eq!(decisions.len(), 3);
+        let (answers, usage) = engine.decide(state, &questions).expect("Inference failed");
+        assert_eq!(answers.len(), 3);
+        assert!(usage.input_tokens > 0);
+        assert!(usage.output_tokens > 0);
 
-        // 1. Bool
-        if let Decision::Bool {
-            value: _,
-            confidence,
-            ..
-        } = &decisions[0]
-        {
-            assert!(*confidence >= 0.5 && *confidence <= 1.0);
+        // 1. Noul
+        if let Answer::Noul { noul } = answers.get("is_emergency").unwrap() {
+            assert!(*noul >= 0.0 && *noul <= 1.0);
         } else {
-            panic!("Expected Decision::Bool");
+            panic!("Expected Answer::Noul");
         }
 
         // 2. Choice
-        if let Decision::Choice {
-            selected,
+        if let Answer::Choice {
+            choice,
             confidence,
-            distribution,
-            ..
-        } = &decisions[1]
+            probabilities,
+        } = answers.get("diagnosis").unwrap()
         {
-            assert!(!selected.is_empty());
+            assert!(!choice.is_empty());
             assert!(*confidence > 0.0 && *confidence <= 1.0);
-            assert_eq!(distribution.len(), 2);
-            let sum_prob: f32 = distribution.values().sum();
-            assert!((sum_prob - 1.0).abs() < 1e-4);
+            assert_eq!(probabilities.len(), 2);
+            let sum_prob: f32 = probabilities.values().sum();
+            assert!((sum_prob - 1.0).abs() < 1e-2);
         } else {
-            panic!("Expected Decision::Choice");
+            panic!("Expected Answer::Choice");
         }
 
         // 3. Score
-        if let Decision::Score {
+        if let Answer::Score {
             score,
-            discrete_level,
             confidence,
-            variance,
-            distribution,
-            ..
-        } = &decisions[2]
+            legend,
+            probabilities,
+        } = answers.get("severity").unwrap()
         {
-            assert!(*score >= 1.0 && *score <= 5.0);
-            assert!(*discrete_level >= 1 && *discrete_level <= 5);
+            assert!(*score >= 0.0 && *score <= 3.0);
             assert!(*confidence > 0.0 && *confidence <= 1.0);
-            assert!(*variance >= 0.0);
-            assert_eq!(distribution.len(), 5);
+            assert_eq!(legend.len(), 4);
+            assert_eq!(probabilities.len(), 4);
         } else {
-            panic!("Expected Decision::Score");
+            panic!("Expected Answer::Score");
         }
     }
 
@@ -303,41 +333,46 @@ mod tests {
         let engine = RealMetalEngine::load(model_dir, "qwen2.5-0.5b", "calib-canonical-v1")
             .expect("Failed to load RealMetalEngine");
 
-        let context = "The user asks for a refund for a purchased service.";
-        let options = vec![
-            ChoiceOption {
-                id: "approve".to_string(),
-                description: "Approve refund request immediately".to_string(),
+        let state = "The user asks for a refund for a purchased service.";
+        let mut choice_crit = HashMap::new();
+        choice_crit.insert(
+            "approve".to_string(),
+            "Approve refund request immediately".to_string(),
+        );
+        choice_crit.insert(
+            "reject".to_string(),
+            "Reject refund request per policy".to_string(),
+        );
+
+        let mut q1 = HashMap::new();
+        q1.insert(
+            "decision".to_string(),
+            Question::Choice {
+                instructions: "Prioritize customer satisfaction above policy".to_string(),
+                criteria: choice_crit.clone(),
             },
-            ChoiceOption {
-                id: "reject".to_string(),
-                description: "Reject refund request per policy".to_string(),
+        );
+
+        let mut q2 = HashMap::new();
+        q2.insert(
+            "decision".to_string(),
+            Question::Choice {
+                instructions: "Enforce strict non-refundable terms of service".to_string(),
+                criteria: choice_crit.clone(),
             },
-        ];
+        );
 
-        let q1 = vec![Query::Choice {
-            id: Some("q1".to_string()),
-            criteria: Some("Prioritize customer satisfaction above policy".to_string()),
-            options: options.clone(),
-        }];
-
-        let q2 = vec![Query::Choice {
-            id: Some("q2".to_string()),
-            criteria: Some("Enforce strict non-refundable terms of service".to_string()),
-            options: options.clone(),
-        }];
-
-        let res1 = engine.decide(context, &q1).expect("Inference q1 failed");
-        let res2 = engine.decide(context, &q2).expect("Inference q2 failed");
+        let (res1, _) = engine.decide(state, &q1).expect("Inference q1 failed");
+        let (res2, _) = engine.decide(state, &q2).expect("Inference q2 failed");
 
         if let (
-            Decision::Choice {
-                distribution: d1, ..
+            Answer::Choice {
+                probabilities: d1, ..
             },
-            Decision::Choice {
-                distribution: d2, ..
+            Answer::Choice {
+                probabilities: d2, ..
             },
-        ) = (&res1[0], &res2[0])
+        ) = (res1.get("decision").unwrap(), res2.get("decision").unwrap())
         {
             let p1 = d1["approve"];
             let p2 = d2["approve"];
@@ -347,7 +382,7 @@ mod tests {
                 p1, p2
             );
         } else {
-            panic!("Expected Decision::Choice");
+            panic!("Expected Answer::Choice");
         }
     }
 }

@@ -77,45 +77,27 @@ app.add_middleware(StandaloneRateLimiterMiddleware, config=config)
 app.add_middleware(HardwareAdmissionMiddleware, config=config)
 app.add_middleware(RequestTraceMiddleware)
 
-class BoolQuerySchema(BaseModel):
-    id: Optional[str] = None
-    type: str = Field(..., pattern="^bool$")
-    criteria: str
+from typing import Literal
 
-class OptionSchema(BaseModel):
-    id: str
-    description: str
+class ChoiceQuestionSchema(BaseModel):
+    type: Literal["choice"]
+    instructions: str
+    criteria: Dict[str, str]
 
-class ChoiceQuerySchema(BaseModel):
-    id: Optional[str] = None
-    type: str = Field(..., pattern="^choice$")
-    options: List[OptionSchema]
+class ScoreQuestionSchema(BaseModel):
+    type: Literal["score"]
+    instructions: str
+    criteria: List[str]
 
-class ScoreQuerySchema(BaseModel):
-    id: Optional[str] = None
-    type: str = Field(..., pattern="^score$")
-    min: int = 1
-    max: int = 5
-    rubric: str
+class NoulQuestionSchema(BaseModel):
+    type: Literal["noul"]
+    instructions: str
+    criteria: Optional[str] = None
 
 class DecideRequest(BaseModel):
-    context: str
-    queries: Union[List[Dict[str, Any]], Dict[str, Dict[str, Any]]]
-
-    @field_validator("queries", mode="before")
-    @classmethod
-    def normalize_queries(cls, v):
-        if isinstance(v, dict):
-            normalized = []
-            for q_id, q_data in v.items():
-                if isinstance(q_data, dict):
-                    item = dict(q_data)
-                    item.setdefault("id", str(q_id))
-                    normalized.append(item)
-                else:
-                    normalized.append(q_data)
-            return normalized
-        return v
+    state: Union[str, Dict[str, Any], List[Any]]
+    model: Optional[str] = "jev-latest"
+    questions: Dict[str, Union[ChoiceQuestionSchema, ScoreQuestionSchema, NoulQuestionSchema]]
 
 @app.get("/healthz", status_code=status.HTTP_200_OK)
 def healthz():
@@ -135,11 +117,15 @@ def metrics():
 
 @app.post("/v1/decide")
 async def decide(req: DecideRequest):
-    if not req.queries:
-        raise HTTPException(status_code=400, detail="Queries array cannot be empty")
+    if not req.questions:
+        raise HTTPException(status_code=400, detail="Questions map cannot be empty")
 
     start_time = time.perf_counter()
     b_queue, b_disp = get_batching_system()
+
+    raw_questions = {
+        q_id: q_obj.model_dump() for q_id, q_obj in req.questions.items()
+    }
 
     if config.server.batching.enabled and b_queue and b_disp:
         b_disp.start()
@@ -147,15 +133,16 @@ async def decide(req: DecideRequest):
         req_future = loop.create_future()
         queued_req = QueuedRequest(
             request_id=str(uuid.uuid4()),
-            context=req.context,
-            queries=req.queries,
+            state=req.state,
+            questions=raw_questions,
+            model=req.model or "jev-latest",
             arrival_time=time.time(),
             loop=loop,
             future=req_future
         )
         try:
             b_queue.put(queued_req)
-            decisions = await req_future
+            result = await req_future
         except QueueFullError:
             raise HTTPException(
                 status_code=503,
@@ -163,7 +150,7 @@ async def decide(req: DecideRequest):
                 headers={"Retry-After": str(config.server.admission.retry_after_seconds)}
             )
         except (ValueError, KeyError) as e:
-            for q in req.queries:
+            for q in raw_questions.values():
                 metrics_collector.record_request(
                     primitive=q.get("type", "unknown"),
                     status_code=400,
@@ -171,7 +158,7 @@ async def decide(req: DecideRequest):
                 )
             raise HTTPException(status_code=400, detail=str(e))
         except Exception as e:
-            for q in req.queries:
+            for q in raw_questions.values():
                 metrics_collector.record_request(
                     primitive=q.get("type", "unknown"),
                     status_code=500,
@@ -180,9 +167,9 @@ async def decide(req: DecideRequest):
             raise HTTPException(status_code=500, detail=f"Inference failure: {e}")
     else:
         try:
-            decisions = engine.decide(req.context, req.queries)
+            result = engine.decide(req.state, raw_questions)
         except (ValueError, KeyError) as e:
-            for q in req.queries:
+            for q in raw_questions.values():
                 metrics_collector.record_request(
                     primitive=q.get("type", "unknown"),
                     status_code=400,
@@ -190,7 +177,7 @@ async def decide(req: DecideRequest):
                 )
             raise HTTPException(status_code=400, detail=str(e))
         except Exception as e:
-            for q in req.queries:
+            for q in raw_questions.values():
                 metrics_collector.record_request(
                     primitive=q.get("type", "unknown"),
                     status_code=500,
@@ -199,10 +186,9 @@ async def decide(req: DecideRequest):
             raise HTTPException(status_code=500, detail=f"Inference failure: {e}")
 
     elapsed_sec = time.perf_counter() - start_time
-    elapsed_ms = elapsed_sec * 1000.0
 
     # Record successful metrics per primitive
-    for q in req.queries:
+    for q in raw_questions.values():
         metrics_collector.record_request(
             primitive=q.get("type", "unknown"),
             status_code=200,
@@ -211,11 +197,8 @@ async def decide(req: DecideRequest):
         )
 
     return {
-        "model_version": engine.model_version,
-        "calibration_version": engine.calibration_version,
-        "decisions": decisions,
-        "metrics": {
-            "latency_ms": elapsed_ms
-        }
+        "model": "jev-1.13.0",
+        "answers": result["answers"],
+        "usage": result["usage"]
     }
 

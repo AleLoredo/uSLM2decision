@@ -7,10 +7,9 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use openjev_core::types::{DecideRequest, DecideResponse, ErrorResponse, RequestMetrics};
+use openjev_core::types::{DecideRequest, DecideResponse, ErrorResponse};
 use openjev_engine::{BatchDispatcher, EngineError, InferenceEngine};
 use std::sync::Arc;
-use std::time::Instant;
 use tracing::error;
 
 pub struct AppState {
@@ -54,25 +53,26 @@ pub async fn decide(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<DecideRequest>,
 ) -> Response {
-    if payload.queries.is_empty() {
+    if payload.questions.is_empty() {
         let err = ErrorResponse {
             error: "BadRequest".to_string(),
-            detail: "Queries array cannot be empty".to_string(),
+            detail: "Questions map cannot be empty".to_string(),
         };
         return (StatusCode::BAD_REQUEST, Json(err)).into_response();
     }
 
-    let start = Instant::now();
-    let rx = state.dispatcher.submit(payload.context, payload.queries);
+    let state_text = payload.serialize_state();
+    let rx = state.dispatcher.submit(state_text, payload.questions);
 
     match rx.await {
-        Ok(Ok(decisions)) => {
-            let latency_ms = start.elapsed().as_secs_f64() * 1000.0;
+        Ok(Ok((answers, usage))) => {
+            let model_name = payload
+                .model
+                .unwrap_or_else(|| state.engine.model_version().to_string());
             let resp = DecideResponse {
-                model_version: state.engine.model_version().to_string(),
-                calibration_version: state.engine.calibration_version().to_string(),
-                decisions,
-                metrics: RequestMetrics { latency_ms },
+                model: model_name,
+                answers,
+                usage,
             };
             (StatusCode::OK, Json(resp)).into_response()
         }

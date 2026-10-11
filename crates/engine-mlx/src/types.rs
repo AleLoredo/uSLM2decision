@@ -1,6 +1,7 @@
 //! Engine traits, configuration, and errors.
 
-use openjev_core::types::{Decision, Query};
+use openjev_core::types::{Answer, Question, UsageInfo};
+use std::collections::HashMap;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -22,7 +23,11 @@ pub enum EngineError {
 }
 
 pub trait InferenceEngine: Send + Sync {
-    fn decide(&self, context: &str, queries: &[Query]) -> Result<Vec<Decision>, EngineError>;
+    fn decide(
+        &self,
+        state: &str,
+        questions: &HashMap<String, Question>,
+    ) -> Result<(HashMap<String, Answer>, UsageInfo), EngineError>;
     fn model_version(&self) -> &str;
     fn calibration_version(&self) -> &str;
     fn is_ready(&self) -> bool;
