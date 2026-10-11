@@ -147,6 +147,7 @@ async def test_batch_dispatcher_concurrent_execution():
         answers = res["answers"]
         assert f"q_noul_{i}" in answers
         assert answers[f"q_noul_{i}"]["type"] == "noul"
+        assert answers[f"q_noul_{i}"]["noul"] in [0, 1]
         assert f"q_choice_{i}" in answers
         assert answers[f"q_choice_{i}"]["type"] == "choice"
 
@@ -174,3 +175,4 @@ def test_server_concurrent_requests_under_batching():
         assert len(data["answers"]) == 1
         q_ans = list(data["answers"].values())[0]
         assert q_ans["type"] == "noul"
+        assert q_ans["noul"] in [0, 1]

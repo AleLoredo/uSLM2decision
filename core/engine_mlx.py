@@ -165,9 +165,10 @@ class MLXInferenceEngine(BaseInferenceEngine):
             if q_type == "noul":
                 values, confidences, p_true = self.bool_head(h_q)
                 mx.eval(p_true)
+                prob_val = float(p_true[0].item())
                 answers[q_id] = {
                     "type": "noul",
-                    "noul": round(float(p_true[0].item()), 4)
+                    "noul": 1 if prob_val >= 0.5 else 0
                 }
             elif q_type == "choice":
                 criteria = q.get("criteria", {})

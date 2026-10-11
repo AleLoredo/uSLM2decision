@@ -98,7 +98,8 @@ def test_decide_endpoint_canonical_primitives():
     # Check noul primitive
     ans_noul = answers["is_urgent"]
     assert ans_noul["type"] == "noul"
-    assert 0.0 <= ans_noul["noul"] <= 1.0
+    assert ans_noul["noul"] in [0, 1]
+    assert isinstance(ans_noul["noul"], int)
 
 def test_decide_endpoint_structured_json_state():
     payload = {
@@ -121,6 +122,7 @@ def test_decide_endpoint_structured_json_state():
     assert "answers" in data
     assert "critical_outage" in data["answers"]
     assert data["answers"]["critical_outage"]["type"] == "noul"
+    assert data["answers"]["critical_outage"]["noul"] in [0, 1]
 
 def test_decide_endpoint_legacy_payloads_rejected_422():
     # Legacy 'context' and 'queries' schema must be rejected (Zero backward compatibility)

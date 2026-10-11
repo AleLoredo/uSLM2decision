@@ -113,7 +113,7 @@ calibration_version = "calib-canonical-v1"
         # Check noul
         noul_ans = answers["q_noul"]
         assert noul_ans["type"] == "noul"
-        assert 0.0 <= noul_ans["noul"] <= 1.0
+        assert noul_ans["noul"] in [0, 1]
         
         # Check choice
         choice_ans = answers["q_choice"]

@@ -236,7 +236,7 @@ curl -X POST http://localhost:8000/v1/decide \
     },
     "is_urgent": {
       "type": "noul",
-      "noul": 1.0
+      "noul": 1
     }
   },
   "usage": {

@@ -146,9 +146,8 @@ impl InferenceEngine for RealMetalEngine {
 
             match q {
                 Question::Noul { .. } => {
-                    let noul_prob = evaluator.evaluate_noul(&h_dec);
-                    let rounded = (noul_prob * 100.0).round() / 100.0;
-                    answers.insert(q_id.clone(), Answer::Noul { noul: rounded });
+                    let noul_val = evaluator.evaluate_noul(&h_dec);
+                    answers.insert(q_id.clone(), Answer::Noul { noul: noul_val });
                 }
                 Question::Choice { criteria, .. } => {
                     if criteria.is_empty() {
@@ -285,7 +284,7 @@ mod tests {
 
         // 1. Noul
         if let Answer::Noul { noul } = answers.get("is_emergency").unwrap() {
-            assert!(*noul >= 0.0 && *noul <= 1.0);
+            assert!(*noul == 0 || *noul == 1);
         } else {
             panic!("Expected Answer::Noul");
         }

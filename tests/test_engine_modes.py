@@ -86,7 +86,7 @@ def test_mlx_engine_real_mode():
         # Noul check
         ans_noul = answers["is_cancellation"]
         assert ans_noul["type"] == "noul"
-        assert 0.0 <= ans_noul["noul"] <= 1.0
+        assert ans_noul["noul"] in [0, 1]
 
         # Choice check
         ans_choice = answers["department"]

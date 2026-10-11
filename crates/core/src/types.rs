@@ -87,7 +87,7 @@ pub enum Answer {
         probabilities: HashMap<String, f32>,
     },
     #[serde(rename = "noul")]
-    Noul { noul: f32 },
+    Noul { noul: u8 },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -186,5 +186,16 @@ mod tests {
         let serialized = req.serialize_state();
         assert!(serialized.contains("user_id"));
         assert!(serialized.contains("1234"));
+    }
+
+    #[test]
+    fn test_noul_answer_boolean_serialization() {
+        let ans_true = Answer::Noul { noul: 1 };
+        let json_true = serde_json::to_string(&ans_true).unwrap();
+        assert_eq!(json_true, r#"{"type":"noul","noul":1}"#);
+
+        let ans_false = Answer::Noul { noul: 0 };
+        let json_false = serde_json::to_string(&ans_false).unwrap();
+        assert_eq!(json_false, r#"{"type":"noul","noul":0}"#);
     }
 }

@@ -39,8 +39,8 @@ impl<'a> DecisionHeadsEvaluator<'a> {
         }
     }
 
-    /// Evaluates Noul: calibrated probability in [0.0, 1.0]
-    pub fn evaluate_noul(&self, h_dec: &[f32]) -> f32 {
+    /// Evaluates Noul: boolean answer as integer 0 or 1
+    pub fn evaluate_noul(&self, h_dec: &[f32]) -> u8 {
         assert_eq!(
             h_dec.len(),
             self.weights.hidden_size,
@@ -52,7 +52,12 @@ impl<'a> DecisionHeadsEvaluator<'a> {
             dot += w * h;
         }
         let logit = dot + self.weights.bool_bias;
-        scaled_sigmoid(logit, self.temperature_bool)
+        let prob = scaled_sigmoid(logit, self.temperature_bool);
+        if prob >= 0.5 {
+            1
+        } else {
+            0
+        }
     }
 
     /// Evaluates ChoiceHead:

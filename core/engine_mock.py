@@ -40,7 +40,7 @@ class MockInferenceEngine(BaseInferenceEngine):
                 p_true = float(np.random.uniform(0.1, 0.9))
                 answers[q_id] = {
                     "type": "noul",
-                    "noul": round(p_true, 4)
+                    "noul": 1 if p_true >= 0.5 else 0
                 }
             elif q_type == "choice":
                 criteria = q.get("criteria", {})

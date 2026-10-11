@@ -58,12 +58,8 @@ impl InferenceEngine for MockEngine {
                 Question::Noul { .. } => {
                     let logit = ((hasher_val % 1000) as f32 / 100.0) - 5.0; // [-5.0, 5.0]
                     let prob = scaled_sigmoid(logit, 1.0);
-                    answers.insert(
-                        q_id.clone(),
-                        Answer::Noul {
-                            noul: (prob * 100.0).round() / 100.0,
-                        },
-                    );
+                    let val: u8 = if prob >= 0.5 { 1 } else { 0 };
+                    answers.insert(q_id.clone(), Answer::Noul { noul: val });
                 }
                 Question::Choice { criteria, .. } => {
                     if criteria.is_empty() {
@@ -213,7 +209,7 @@ mod tests {
         // Check Noul
         match answers.get("is_urgent").unwrap() {
             Answer::Noul { noul } => {
-                assert!(*noul >= 0.0 && *noul <= 1.0);
+                assert!(*noul == 0 || *noul == 1);
             }
             _ => panic!("Expected Noul answer"),
         }
