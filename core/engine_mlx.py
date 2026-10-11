@@ -134,7 +134,7 @@ class MLXInferenceEngine(BaseInferenceEngine):
         s_len = max(len(s_tokens), 1)
 
         questions_items = list(questions.items())
-        q_tokens_list = [self._tokenize(extract_question_text(q_dict)) for _, q_dict in questions_items]
+        q_tokens_list = [self._tokenize(f"\n\nQuestion: {extract_question_text(q_dict)}") for _, q_dict in questions_items]
         q_lens = [max(len(qt), 1) for qt in q_tokens_list]
 
         # 1. Construct Additive Block-Causal Mask and Segment Position IDs
@@ -181,7 +181,8 @@ class MLXInferenceEngine(BaseInferenceEngine):
                 if self.backbone is not None:
                     opt_vectors = []
                     for opt in options:
-                        opt_tokens = self._tokenize(opt["description"]) or [1]
+                        opt_text = f"{opt['id']}: {opt['description']}" if opt.get("id") else opt.get("description", "")
+                        opt_tokens = self._tokenize(opt_text) or [1]
                         opt_hidden = self.backbone(mx.array([opt_tokens]))
                         opt_vectors.append(opt_hidden[:, -1, :].astype(mx.float32))
                     e_options = mx.concatenate(opt_vectors, axis=0)
@@ -210,7 +211,7 @@ class MLXInferenceEngine(BaseInferenceEngine):
                     raise ValueError(f"Question '{q_id}' of type 'score' requires criteria list with at least 2 levels")
 
                 num_levels = len(criteria)
-                s_out = self.score_head(h_q, min_val=0, max_val=num_levels - 1)
+                s_out = self.score_head(h_q, min_val=0, max_val=num_levels - 1, num_levels=num_levels)
                 mx.eval(s_out["score"], s_out["distribution"])
 
                 score_val = float(s_out["score"][0].item())

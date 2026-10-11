@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "model": "qwen2.5-0.5b",
+  "status": "calibrated",
+  "temperatures": {
+    "bool": 0.5,
+    "choice": 1.0,
+    "score": 1.0
+  },
+  "timestamp": "2026-10-11T09:46:55Z"
+}

@@ -71,10 +71,10 @@ def verify_canonical_heads(heads_path: str, expected_hidden_dim: int) -> None:
                 f"but backbone hidden_size={expected_hidden_dim} requires {expected_shape}."
             )
 
-def init_canonical_heads(model_dir: str, hidden_dim: Optional[int] = None) -> str:
+def init_canonical_heads(model_dir: str, hidden_dim: Optional[int] = None, force: bool = False) -> str:
     """
     Creates canonical heads.safetensors and heads_metadata.json in model_dir.
-    If already existing and valid, returns the existing path.
+    If already existing and valid, returns the existing path unless force=True.
     """
     os.makedirs(model_dir, exist_ok=True)
     heads_path = os.path.join(model_dir, "heads.safetensors")
@@ -82,8 +82,8 @@ def init_canonical_heads(model_dir: str, hidden_dim: Optional[int] = None) -> st
     if hidden_dim is None:
         hidden_dim = get_model_hidden_size(model_dir, default=896)
 
-    # If already exists and valid, skip generation
-    if os.path.isfile(heads_path):
+    # If already exists and valid, skip generation unless force is True
+    if os.path.isfile(heads_path) and not force:
         try:
             verify_canonical_heads(heads_path, hidden_dim)
             return heads_path
@@ -135,13 +135,14 @@ if __name__ == "__main__":
     parser.add_argument("--model-dir", required=True, help="Path to model directory")
     parser.add_argument("--init-heads", action="store_true", help="Initialize canonical heads if missing or invalid")
     parser.add_argument("--verify", action="store_true", help="Verify canonical heads against config.json")
+    parser.add_argument("--force", "-f", action="store_true", help="Force re-generation of canonical heads even if present")
     parser.add_argument("--hidden-dim", type=int, default=None, help="Explicit hidden dimension (optional)")
 
     args = parser.parse_args()
     h_dim = args.hidden_dim or get_model_hidden_size(args.model_dir)
 
     if args.init_heads:
-        init_canonical_heads(args.model_dir, hidden_dim=h_dim)
+        init_canonical_heads(args.model_dir, hidden_dim=h_dim, force=args.force)
     elif args.verify:
         h_path = os.path.join(args.model_dir, "heads.safetensors")
         verify_canonical_heads(h_path, h_dim)

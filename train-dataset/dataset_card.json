@@ -1,0 +1,17 @@
+{
+  "dataset_name": "openjev-system1-multitask",
+  "version": "1.0.0",
+  "output_directory": "train-dataset",
+  "total_samples": 1200,
+  "split": {
+    "train": 960,
+    "val": 120,
+    "test": 120
+  },
+  "primitives": {
+    "noul": 400,
+    "choice": 400,
+    "score": 400
+  },
+  "license": "Apache-2.0"
+}

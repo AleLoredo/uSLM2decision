@@ -2,7 +2,7 @@
   "format_version": "1.0",
   "openjev_version": "2.0.0",
   "hidden_dim": 896,
-  "status": "canonical_initialized",
+  "status": "trained_and_calibrated",
   "tensors": {
     "bool_head.linear.weight": [
       1,
@@ -22,5 +22,16 @@
     "score_head.w_score.bias": [
       5
     ]
+  },
+  "calibration": {
+    "version": "1.0",
+    "model": "qwen2.5-0.5b",
+    "status": "calibrated",
+    "temperatures": {
+      "bool": 0.5,
+      "choice": 1.0,
+      "score": 1.0
+    },
+    "timestamp": "2026-10-11T09:46:55Z"
   }
 }
