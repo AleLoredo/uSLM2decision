@@ -10,6 +10,7 @@ import urllib.request
 import urllib.error
 import pytest
 
+@pytest.mark.skip(reason="La implementación de Rust queda abandonada/pausada hasta nuevo aviso; desarrollo activo en Python.")
 def test_rust_binary_output_schema_conformance():
     """
     Verifies that the compiled Rust native binary executes and generates

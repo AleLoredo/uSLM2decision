@@ -52,6 +52,7 @@ if [ "$RUNTIME" = "rust" ]; then
     echo "Ejecuta primero: cargo build --release (o ./install.sh seleccionando Rust)."
     exit 1
   fi
+  echo "⚠️  Aviso: La implementación nativa de Rust está pausada hasta nuevo aviso. El desarrollo activo es en Python."
   echo "-> Runtime seleccionado: Rust Nativo (openjev-mlx)"
   echo "-> Servidor escuchando en http://${HOST}:${PORT}"
   exec ./target/release/openjev-mlx

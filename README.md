@@ -4,20 +4,23 @@
 
 OpenJEV is an open-source inference engine designed to evaluate unstructured context against developer-defined discrete schemas in a **single non-autoregressive forward pass**, producing typed, well-calibrated decisions with explicit confidence bounds.
 
+> [!IMPORTANT]
+> **Estado de Desarrollo Activo:** Todas las modificaciones y nuevas características del proyecto se realizan **exclusivamente en la implementación de Python** (`core/`, `server/`, `data/`, MLX en Apple Silicon Metal GPU). La implementación nativa de Rust (`crates/`) queda **pausada / abandonada hasta nuevo aviso**.
+
 ---
 
 ## 🌟 Key Features
 
 - **Typed Decision Primitives:**
-  - `bool`: Binary decisions with calibrated confidence and explicit tie-breaking rules.
+  - `bool` / `noul`: Binary true/false decisions (0 o 1) with calibrated confidence.
   - `choice`: Multi-class discrete choices ($1 \le N \le 255$) with full probability distributions over candidate options.
   - `score`: Ordinal rubric scoring with expected values, discrete levels, and distribution variance.
 - **Calibrated Alignment:**
   - Trained via **Combined Focal + Brier Score Regularization**, achieving an Expected Calibration Error (**ECE**) of **3.67%** (vs 14.82% for standard cross-entropy).
   - Built-in **Fast Post-Hoc Recalibration** tools (<50ms execution on 200 domain samples) bringing Out-of-Distribution ECE down from **18.26% to 3.34%**.
-- **Multi-Runtime Serving Tier:**
-  - **Native Rust Engine (`openjev-mlx`):** Standalone compiled binary on Apple Silicon (Metal GPU) with zero Python overhead, Axum HTTP serving, dynamic batching, native `safetensors` loader, and sub-50ms latency.
-  - **Python Edge Engine (Apple Silicon / Metal GPU):** FastAPI server (`server/edge_server.py`) with MLX backend execution.
+- **Serving Tier:**
+  - **Python Edge Engine (Apple Silicon / Metal GPU) [ACTIVO]:** Servidor FastAPI (`server/edge_server.py`) con ejecución sobre Apple MLX en Metal GPU.
+  - **Native Rust Engine (`openjev-mlx`) [PAUSADO]:** La implementación nativa en Rust queda en pausa hasta nuevo aviso mientras se consolida el modelo en Python.
   - **Containerized GPU Tier (Linux / Windows WSL 2):** Dockerized deployment with NVIDIA CUDA acceleration (`Dockerfile`).
   - **Cloud Tier (vLLM Prefix-Caching):** Parallel non-autoregressive query evaluation sharing context KV-caches (`server/vllm_prefix_serving.py`).
 - **Strict Normative Specification (`SPEC.md`):**
