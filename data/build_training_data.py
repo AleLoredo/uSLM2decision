@@ -37,7 +37,15 @@ NOUL_URGENT_POSITIVES = [
     "we are in the middle of our product launch and the integration is failing, urgent help needed",
     "system outage: all webhooks stopped firing 15 minutes ago, critical priority",
     "help! our entire team is locked out of the dashboard during customer hours",
-    "billing double charged our credit card 10 times in 5 minutes, stop this right now"
+    "billing double charged our credit card 10 times in 5 minutes, stop this right now",
+    # Spanish colloquial & high urgency
+    "Son unos soretes. Dene de baja de su servicio de mierda ya",
+    "Es una emergencia crítica, la base de datos se cayó y estamos perdiendo ventas ahora mismo",
+    "Nos están cobrando de más y nadie responde, atiendan ya urgente",
+    "Se cayó todo el sistema en producción, necesitamos ayuda inmediata",
+    "Me hackearon la cuenta y están haciendo cargos no autorizados ahora mismo",
+    "Urgente por favor, no podemos procesar pagos de clientes hace 2 horas",
+    "Arreglen esto hoy mismo, es completamente inaceptable y urgente"
 ]
 
 NOUL_URGENT_NEGATIVES = [
@@ -50,7 +58,14 @@ NOUL_URGENT_NEGATIVES = [
     "curious if you will support Python 3.14 in the upcoming quarter",
     "hello team, hope you are having a nice weekend, quick question about receipt formatting",
     "minor suggestion: it would be nice to have a search shortcut",
-    "everything is working fine, just wanted to confirm my renewal date next month"
+    "everything is working fine, just wanted to confirm my renewal date next month",
+    # Spanish low urgency / polite
+    "Hola, una consulta cuando tengan tiempo sobre los planes disponibles",
+    "Buenas tardes, quería consultar si tienen soporte para modo oscuro",
+    "Todo funcionando excelente por aquí, muchas gracias por el servicio",
+    "Una sugerencia menor: estaría bueno agregar un atajo de teclado",
+    "Sin apuro, queríamos saber la fecha de renovación del próximo mes",
+    "Hola equipo, buen fin de semana, una duda rápida sobre el formato de facturas"
 ]
 
 NOUL_CANCEL_POSITIVES = [
@@ -58,7 +73,15 @@ NOUL_CANCEL_POSITIVES = [
     "I want to terminate my account and delete all associated data",
     "cancel my plan right now and issue a refund for this month",
     "close my account, I am switching to another provider",
-    "stop auto-renewal and cancel my membership"
+    "stop auto-renewal and cancel my membership",
+    # Spanish cancellation
+    "Son unos soretes. Dene de baja de su servicio de mierda ya",
+    "Quiero dar de baja mi suscripción inmediatamente, no me cobren más",
+    "Por favor cancelen mi cuenta y eliminen todos mis datos personales",
+    "Solicito la baja del servicio y el reembolso total de este mes",
+    "Denme de baja ya mismo, me paso a otra empresa",
+    "Quiero rescindir el contrato y cerrar la cuenta definitivamente",
+    "Detengan la renovación automática y cancelen mi membresía ahora"
 ]
 
 NOUL_CANCEL_NEGATIVES = [
@@ -66,7 +89,13 @@ NOUL_CANCEL_NEGATIVES = [
     "we would like to add 15 more user seats to our current subscription",
     "can we renew our annual contract for another two years?",
     "where can I download the invoice for our renewed subscription?",
-    "we love the tool and want to expand it to our entire engineering team"
+    "we love the tool and want to expand it to our entire engineering team",
+    # Spanish renewal / upgrade
+    "¿Cómo hago para renovar mi suscripción por un año más?",
+    "Queremos agregar 15 licencias más a nuestro plan actual",
+    "Excelente servicio, queremos ampliar el contrato corporativo por dos años",
+    "¿Dónde descargo la factura de la renovación anual de nuestra cuenta?",
+    "Nos encanta la herramienta y queremos extenderla a todo el equipo"
 ]
 
 # ---------------------------------------------------------
@@ -74,13 +103,13 @@ NOUL_CANCEL_NEGATIVES = [
 # ---------------------------------------------------------
 
 CHOICE_CRITERIA_DEPARTMENTS = {
-    "billing": "Payment, subscription, invoice or charge issues",
-    "technical": "API errors, integration bugs, code crashes or system outages",
-    "sales": "Pricing inquiries, custom enterprise plans, or quotes"
+    "billing": "Invoices, payments, refunds, subscription cancellations",
+    "technical": "Bugs, outages, login issues",
+    "sales": "Pricing, new plans, enterprise inquiries"
 }
 
 CHOICE_SAMPLES_DEPARTMENT = [
-    # Billing
+    # Billing (English)
     ("there is a problem with my billling. you idiots i need this fixed by today", "billing"),
     ("My credit card was charged twice for the monthly subscription.", "billing"),
     ("Can I get an updated VAT invoice for our accounting team?", "billing"),
@@ -89,8 +118,21 @@ CHOICE_SAMPLES_DEPARTMENT = [
     ("We need a refund for the unused seats from last quarter.", "billing"),
     ("Payment failed with error card_declined, how do we retry?", "billing"),
     ("Our account shows past due even though we wired payment yesterday.", "billing"),
+    ("Please cancel my subscription immediately and stop charging me.", "billing"),
     
-    # Technical
+    # Billing (Spanish)
+    ("Son unos soretes. Dene de baja de su servicio de mierda ya", "billing"),
+    ("Quiero dar de baja mi servicio y que me devuelvan el dinero cobrado.", "billing"),
+    ("Me cobraron dos veces la suscripción este mes en la tarjeta de crédito.", "billing"),
+    ("Necesito la factura con el CUIT y detalle de IVA de este período.", "billing"),
+    ("¿Cómo cambio el método de pago registrado para la facturación mensual?", "billing"),
+    ("El pago fue rechazado con error tarjeta vencida, ¿cómo reintento?", "billing"),
+    ("Quiero cancelar mi suscripción inmediatamente, no me renueven más.", "billing"),
+    ("Solicito el reintegro por los días que el servicio no estuvo disponible.", "billing"),
+    ("Por favor cancelen mi cuenta y detengan cualquier cargo futuro.", "billing"),
+    ("Nuestra cuenta figura como vencida pero transferimos el pago ayer.", "billing"),
+    
+    # Technical (English)
     ("Our API integration started returning 500 errors on every request 20 minutes ago.", "technical"),
     ("The webhook endpoint is throwing 502 Bad Gateway intermittently.", "technical"),
     ("I am getting a TypeError: NoneType object is not callable in the Python SDK.", "technical"),
@@ -100,7 +142,16 @@ CHOICE_SAMPLES_DEPARTMENT = [
     ("Requests are timing out after 30 seconds when querying the search API.", "technical"),
     ("Our SSL certificate seems to have expired on the API gateway.", "technical"),
 
-    # Sales
+    # Technical (Spanish)
+    ("La API está respondiendo con código 500 en todas las peticiones desde hace 20 minutos.", "technical"),
+    ("Tenemos un error de timeout al consultar el endpoint de decisiones.", "technical"),
+    ("El webhook no se está ejecutando cuando recibimos eventos.", "technical"),
+    ("Error de conexión SSL en el gateway de producción.", "technical"),
+    ("El contenedor de Docker se cierra con error 137 de falta de memoria OOM.", "technical"),
+    ("La migración de la base de datos falló con un error en alter table.", "technical"),
+    ("Obtengo TypeError en el SDK de Python al inicializar el cliente.", "technical"),
+
+    # Sales (English)
     ("What are your enterprise pricing tiers for 250 active agents?", "sales"),
     ("We would like to request a formal RFP quote for our annual procurement.", "sales"),
     ("Do you offer volume discounts for non-profit organizations or universities?", "sales"),
@@ -108,7 +159,15 @@ CHOICE_SAMPLES_DEPARTMENT = [
     ("Is there an annual discount if we pay upfront instead of monthly?", "sales"),
     ("Can we get custom terms and an SLA guarantee for enterprise tier?", "sales"),
     ("How does your pricing compare with competitor X for 5 million tokens?", "sales"),
-    ("We want to discuss custom contract terms before signing the order form.", "sales")
+    ("We want to discuss custom contract terms before signing the order form.", "sales"),
+
+    # Sales (Spanish)
+    ("¿Cuáles son los precios y planes corporativos para 250 usuarios activos?", "sales"),
+    ("Quisiéramos coordinar una demo del producto con el vicepresidente de tecnología.", "sales"),
+    ("¿Tienen descuento si pagamos la suscripción anual por adelantado?", "sales"),
+    ("Necesitamos un presupuesto formal para compras corporativas.", "sales"),
+    ("¿Tienen planes especiales para startups o instituciones educativas?", "sales"),
+    ("Queremos consultar las tarifas y límites de tokens para contrato enterprise.", "sales")
 ]
 
 CHOICE_CRITERIA_PRIORITY = {
@@ -121,10 +180,14 @@ CHOICE_CRITERIA_PRIORITY = {
 CHOICE_SAMPLES_PRIORITY = [
     ("All customer payments are failing in production right now!", "p0_critical"),
     ("Core service is crashing on every request across all regions.", "p0_critical"),
+    ("Se cayó la base de datos central en producción, todo bloqueado.", "p0_critical"),
     ("Export to CSV is failing, but users can still view data on screen.", "p1_high"),
+    ("La exportación falla pero la visualización sigue funcionando.", "p1_high"),
     ("Single user cannot reset password, but admin can reset it manually.", "p2_medium"),
+    ("Un usuario puntual no puede restablecer contraseña.", "p2_medium"),
     ("Button padding looks slightly misaligned on Safari browser.", "p3_low"),
-    ("Would love to see a dark mode option added in the future.", "p3_low")
+    ("Would love to see a dark mode option added in the future.", "p3_low"),
+    ("Estaría bueno que agreguen un botón de modo oscuro en el futuro.", "p3_low")
 ]
 
 # ---------------------------------------------------------
@@ -138,26 +201,46 @@ SCORE_RUBRIC_FRUSTRATION = [
 ]
 
 SCORE_SAMPLES_FRUSTRATION = [
-    # Level 0 (Calm)
+    # Level 0 (Calm - English)
     ("Hello, could you please clarify how the API rate limit is counted?", 0),
     ("Hi, our team is testing the endpoint and we have a quick question.", 0),
     ("Good morning, here is the log snippet for your review when convenient.", 0),
     ("I noticed an inconsistency in the documentation for the decide endpoint.", 0),
     ("Thank you for the quick reply, could you also confirm the port number?", 0),
+    # Level 0 (Calm - Spanish)
+    ("Hola, buenos días, ¿podrían confirmarme cuál es el puerto por defecto del servicio?", 0),
+    ("Hola, una consulta tranquila sobre cómo se calcula el límite de peticiones.", 0),
+    ("Aquí les adjunto el log para que lo revisen cuando tengan disponibilidad, gracias.", 0),
+    ("Encontré un pequeño detalle en la documentación técnica para consultar.", 0),
+    ("Muchas gracias por la respuesta anterior, todo quedó muy claro y funcionando.", 0),
 
-    # Level 1 (Frustrated)
+    # Level 1 (Frustrated - English)
     ("I have been trying to connect my Stripe account for 3 days and the integration keeps failing.", 1),
     ("This is the second time this week our sync has broken, please look into this.", 1),
     ("I submitted a ticket 48 hours ago and have not received any response yet.", 1),
     ("The error messages are completely unhelpful and we are losing time.", 1),
     ("We followed the docs step by step and it still does not work as described.", 1),
+    # Level 1 (Frustrated - Spanish)
+    ("Hace 3 días que estoy intentando configurar la cuenta y sigue dando error.", 1),
+    ("Es la segunda vez en la semana que se corta la sincronización, por favor revisen.", 1),
+    ("Mandé un ticket hace 48 horas y todavía nadie me contestó.", 1),
+    ("Seguimos todos los pasos de la guía y no funciona como dice la documentación.", 1),
+    ("Los mensajes de error no ayudan en nada y estamos perdiendo bastante tiempo.", 1),
 
-    # Level 2 (Very angry)
+    # Level 2 (Very angry, strong language - English)
     ("there is a problem with my billling. you idiots i need this fixed by today", 2),
     ("this is completely unacceptable and your software is garbage!", 2),
     ("you charged us 10 times and your support is utterly useless, fix this immediately!", 2),
     ("what a joke of a company, your incompetence is costing us thousands of dollars!", 2),
-    ("I want to speak with your manager immediately, this is atrocious service!", 2)
+    ("I want to speak with your manager immediately, this is atrocious service!", 2),
+    # Level 2 (Very angry, strong language - Spanish)
+    ("Son unos soretes. Dene de baja de su servicio de mierda ya", 2),
+    ("Son unos ladrones y unos estafadores, me robaron la plata en la cara!", 2),
+    ("Es una porquería de servicio, son unos inútiles de mierda!", 2),
+    ("Esto es una vergüenza total, váyanse al carajo, exijo mi plata ya!", 2),
+    ("Me cobraron cinco veces y el soporte es una basura que no sirve para nada!", 2),
+    ("Manga de chantas, son un desastre, cancelen todo inmediatamente ya!", 2),
+    ("Son unos incompetentes totales, me cansé de este servicio nefasto!", 2)
 ]
 
 SCORE_RUBRIC_SEVERITY = [
@@ -169,25 +252,40 @@ SCORE_RUBRIC_SEVERITY = [
 SCORE_SAMPLES_SEVERITY = [
     ("Typo on the landing page header text.", 0),
     ("Icon color is slightly off in dark mode.", 0),
+    ("Error tipográfico menor en el encabezado de la página.", 0),
     ("Notification email was delayed by 5 minutes.", 1),
     ("Search filters take 2 seconds longer than usual.", 1),
+    ("El correo de notificación tardó 5 minutos en enviarse.", 1),
     ("Entire customer database is offline and requests are failing 100%.", 2),
-    ("Security breach: customer tokens leaked in public logs.", 2)
+    ("Security breach: customer tokens leaked in public logs.", 2),
+    ("Toda la base de datos principal está caída y el servicio no responde.", 2)
 ]
 
 # ---------------------------------------------------------
 # Generator Functions with Data Augmentation
 # ---------------------------------------------------------
 
-def generate_noul_dataset(target_count: int = 500) -> List[Dict[str, Any]]:
+def generate_noul_dataset(target_count: int = 600) -> List[Dict[str, Any]]:
     samples = []
+    urg_instructions = [
+        "The message conveys urgency or time-sensitivity",
+        "Determine if the request is urgent",
+        "Is this urgent?",
+        "Urgency evaluation"
+    ]
+    canc_instructions = [
+        "The user is requesting account or subscription cancellation",
+        "Determine if the user wants to cancel",
+        "Is this a cancellation request?",
+        "Account cancellation intent"
+    ]
     
     # 1. Urgency evaluation
-    q_urg = {
-        "type": "noul",
-        "instructions": "The message conveys urgency or time-sensitivity"
-    }
     for _ in range(target_count // 4):
+        q_urg = {
+            "type": "noul",
+            "instructions": RNG.choice(urg_instructions)
+        }
         p = RNG.choice(NOUL_URGENT_POSITIVES)
         samples.append({
             "primitive": "noul",
@@ -204,11 +302,11 @@ def generate_noul_dataset(target_count: int = 500) -> List[Dict[str, Any]]:
         })
 
     # 2. Cancellation evaluation
-    q_canc = {
-        "type": "noul",
-        "instructions": "The user is requesting account or subscription cancellation"
-    }
     for _ in range(target_count // 4):
+        q_canc = {
+            "type": "noul",
+            "instructions": RNG.choice(canc_instructions)
+        }
         p = RNG.choice(NOUL_CANCEL_POSITIVES)
         samples.append({
             "primitive": "noul",
@@ -226,16 +324,27 @@ def generate_noul_dataset(target_count: int = 500) -> List[Dict[str, Any]]:
         
     return samples
 
-def generate_choice_dataset(target_count: int = 500) -> List[Dict[str, Any]]:
+def generate_choice_dataset(target_count: int = 600) -> List[Dict[str, Any]]:
     samples = []
+    dept_instructions = [
+        "Route request to the correct department",
+        "Which team should handle this",
+        "Select the appropriate department",
+        "Determine destination team"
+    ]
+    prio_instructions = [
+        "Select the appropriate incident severity priority",
+        "Determine incident priority level",
+        "Choose priority classification"
+    ]
     
     # 1. Department routing
-    q_dept = {
-        "type": "choice",
-        "instructions": "Which team should handle this",
-        "criteria": CHOICE_CRITERIA_DEPARTMENTS
-    }
     for _ in range(target_count // 2):
+        q_dept = {
+            "type": "choice",
+            "instructions": RNG.choice(dept_instructions),
+            "criteria": CHOICE_CRITERIA_DEPARTMENTS
+        }
         text, target = RNG.choice(CHOICE_SAMPLES_DEPARTMENT)
         samples.append({
             "primitive": "choice",
@@ -245,12 +354,12 @@ def generate_choice_dataset(target_count: int = 500) -> List[Dict[str, Any]]:
         })
 
     # 2. Priority routing
-    q_prio = {
-        "type": "choice",
-        "instructions": "Select the appropriate incident severity priority",
-        "criteria": CHOICE_CRITERIA_PRIORITY
-    }
     for _ in range(target_count // 2):
+        q_prio = {
+            "type": "choice",
+            "instructions": RNG.choice(prio_instructions),
+            "criteria": CHOICE_CRITERIA_PRIORITY
+        }
         text, target = RNG.choice(CHOICE_SAMPLES_PRIORITY)
         samples.append({
             "primitive": "choice",
@@ -261,16 +370,27 @@ def generate_choice_dataset(target_count: int = 500) -> List[Dict[str, Any]]:
         
     return samples
 
-def generate_score_dataset(target_count: int = 500) -> List[Dict[str, Any]]:
+def generate_score_dataset(target_count: int = 600) -> List[Dict[str, Any]]:
     samples = []
+    frust_instructions = [
+        "Determine frustration level of the user",
+        "How frustrated the customer appears",
+        "Rate user frustration level",
+        "Evaluate customer frustration"
+    ]
+    sev_instructions = [
+        "Rate the operational impact severity level",
+        "Determine severity score",
+        "Evaluate incident impact"
+    ]
     
     # 1. Frustration rubric
-    q_frust = {
-        "type": "score",
-        "instructions": "How frustrated the customer appears",
-        "criteria": SCORE_RUBRIC_FRUSTRATION
-    }
     for _ in range(target_count // 2):
+        q_frust = {
+            "type": "score",
+            "instructions": RNG.choice(frust_instructions),
+            "criteria": SCORE_RUBRIC_FRUSTRATION
+        }
         text, target = RNG.choice(SCORE_SAMPLES_FRUSTRATION)
         samples.append({
             "primitive": "score",
@@ -280,12 +400,12 @@ def generate_score_dataset(target_count: int = 500) -> List[Dict[str, Any]]:
         })
 
     # 2. Severity rubric
-    q_sev = {
-        "type": "score",
-        "instructions": "Rate the operational impact severity level",
-        "criteria": SCORE_RUBRIC_SEVERITY
-    }
     for _ in range(target_count // 2):
+        q_sev = {
+            "type": "score",
+            "instructions": RNG.choice(sev_instructions),
+            "criteria": SCORE_RUBRIC_SEVERITY
+        }
         text, target = RNG.choice(SCORE_SAMPLES_SEVERITY)
         samples.append({
             "primitive": "score",
@@ -296,7 +416,7 @@ def generate_score_dataset(target_count: int = 500) -> List[Dict[str, Any]]:
         
     return samples
 
-def build_all_training_data(output_dir: str = DATASET_DIR, count_per_primitive: int = 400) -> Dict[str, Any]:
+def build_all_training_data(output_dir: str = DATASET_DIR, count_per_primitive: int = 600) -> Dict[str, Any]:
     os.makedirs(output_dir, exist_ok=True)
     
     noul_data = generate_noul_dataset(count_per_primitive)

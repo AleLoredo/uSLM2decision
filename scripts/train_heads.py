@@ -25,6 +25,8 @@ from calibration.loss_shaping import combined_focal_brier_loss
 from calibration.post_hoc import TemperatureScaler
 from core.model_scanner import get_model_hidden_size, get_expected_shapes
 
+from core.batching.packer import extract_question_text
+
 def load_jsonl(path: str) -> List[Dict[str, Any]]:
     records = []
     with open(path, "r", encoding="utf-8") as f:
@@ -35,7 +37,7 @@ def load_jsonl(path: str) -> List[Dict[str, Any]]:
     return records
 
 class HeadTrainer:
-    def __init__(self, model_dir: str, dataset_dir: str, lr: float = 1e-3, epochs: int = 20):
+    def __init__(self, model_dir: str, dataset_dir: str, lr: float = 1e-3, epochs: int = 60):
         self.model_dir = model_dir
         self.dataset_dir = dataset_dir
         self.lr = lr
@@ -55,10 +57,13 @@ class HeadTrainer:
         self.choice_head = ChoiceHead(hidden_dim=self.hidden_dim)
         self.score_head = ScoreHead(hidden_dim=self.hidden_dim, num_levels=5)
 
-    def _extract_embedding(self, text: str) -> mx.array:
-        tokens = self.tokenizer.encode(text, add_special_tokens=False)
-        if not tokens:
-            tokens = [1]
+    def _extract_embedding(self, state: str, q_text: str = "") -> mx.array:
+        if q_text:
+            s_tokens = self.tokenizer.encode(state, add_special_tokens=False)
+            q_tokens = self.tokenizer.encode(f"\n\nQuestion: {q_text}", add_special_tokens=False)
+            tokens = (s_tokens + q_tokens) or [1]
+        else:
+            tokens = self.tokenizer.encode(state, add_special_tokens=False) or [1]
         hidden = self.backbone(mx.array([tokens]))
         return hidden[:, -1, :].astype(mx.float32)
 
@@ -81,9 +86,8 @@ class HeadTrainer:
             prim = rec["primitive"]
             state = rec["state"]
             q = rec["question"]
-            instr = q.get("instructions", "")
-            prompt = f"{state}\n\nQuestion: {instr}"
-            h_q = self._extract_embedding(prompt)
+            q_text = extract_question_text(q)
+            h_q = self._extract_embedding(state, q_text)
 
             if prim == "noul":
                 target_val = float(rec["target"])
@@ -139,43 +143,81 @@ class HeadTrainer:
             mx.eval(self.bool_head.parameters(), opt_bool.state)
         print(f"  ✅ NoulHead trained: final loss = {loss.item():.4f}")
 
-        # 2. Train ChoiceHead
+        # 2. Train ChoiceHead (Batched by option count)
         opt_choice = optim.AdamW(learning_rate=self.lr)
         choice_train = train_feat["choice"]
 
-        def choice_step_fn(model, sample_list):
+        choice_by_n: Dict[int, Dict[str, List[Any]]] = {}
+        for h_q, e_options, target_idx in choice_train:
+            n_opts = e_options.shape[0]
+            if n_opts not in choice_by_n:
+                choice_by_n[n_opts] = {"h_q": [], "e_options": [], "targets": []}
+            choice_by_n[n_opts]["h_q"].append(h_q)
+            choice_by_n[n_opts]["e_options"].append(mx.expand_dims(e_options, 0))
+            choice_by_n[n_opts]["targets"].append(target_idx)
+
+        batched_choice_train = [
+            (
+                mx.concatenate(data["h_q"], axis=0),
+                mx.concatenate(data["e_options"], axis=0),
+                mx.array(data["targets"])
+            )
+            for n_opts, data in choice_by_n.items()
+        ]
+
+        def choice_step_fn(model, batches):
             total_loss = 0.0
-            for h_q, e_options, target_idx in sample_list:
-                sel, conf, probs = model(h_q, e_options)
-                loss = choice_cross_entropy_loss(probs, mx.array([target_idx]))
-                total_loss = total_loss + loss
-            return total_loss / len(sample_list)
+            total_samples = 0
+            for h_q_b, e_opts_b, targets_b in batches:
+                sel, conf, probs = model(h_q_b, e_opts_b)
+                loss = choice_cross_entropy_loss(probs, targets_b)
+                total_loss = total_loss + loss * targets_b.shape[0]
+                total_samples += targets_b.shape[0]
+            return total_loss / max(total_samples, 1)
 
         choice_grad_fn = nn.value_and_grad(self.choice_head, choice_step_fn)
 
         for ep in range(1, self.epochs + 1):
-            loss_c, grads_c = choice_grad_fn(self.choice_head, choice_train)
+            loss_c, grads_c = choice_grad_fn(self.choice_head, batched_choice_train)
             opt_choice.update(self.choice_head, grads_c)
             mx.eval(self.choice_head.parameters(), opt_choice.state)
         print(f"  ✅ ChoiceHead trained: final loss = {loss_c.item():.4f}")
 
-        # 3. Train ScoreHead
+        # 3. Train ScoreHead (Batched by rubric levels)
         opt_score = optim.AdamW(learning_rate=self.lr)
         score_train = train_feat["score"]
 
-        def score_step_fn(model, sample_list):
+        score_by_levels: Dict[int, Dict[str, List[Any]]] = {}
+        for h_q, num_levels, target_level in score_train:
+            if num_levels not in score_by_levels:
+                score_by_levels[num_levels] = {"h_q": [], "targets": []}
+            score_by_levels[num_levels]["h_q"].append(h_q)
+            score_by_levels[num_levels]["targets"].append(target_level)
+
+        batched_score_train = [
+            (
+                mx.concatenate(data["h_q"], axis=0),
+                num_levels,
+                mx.array(data["targets"])
+            )
+            for num_levels, data in score_by_levels.items()
+        ]
+
+        def score_step_fn(model, batches):
             total_loss = 0.0
-            for h_q, num_levels, target_level in sample_list:
-                s_out = model(h_q, min_val=0, max_val=num_levels - 1, num_levels=num_levels)
+            total_samples = 0
+            for h_q_b, num_levels, targets_b in batches:
+                s_out = model(h_q_b, min_val=0, max_val=num_levels - 1, num_levels=num_levels)
                 probs = s_out["distribution"]
-                loss = ordinal_score_loss(probs, mx.array([target_level]), num_levels=num_levels)
-                total_loss = total_loss + loss
-            return total_loss / len(sample_list)
+                loss = ordinal_score_loss(probs, targets_b, num_levels=num_levels)
+                total_loss = total_loss + loss * targets_b.shape[0]
+                total_samples += targets_b.shape[0]
+            return total_loss / max(total_samples, 1)
 
         score_grad_fn = nn.value_and_grad(self.score_head, score_step_fn)
 
         for ep in range(1, self.epochs + 1):
-            loss_s, grads_s = score_grad_fn(self.score_head, score_train)
+            loss_s, grads_s = score_grad_fn(self.score_head, batched_score_train)
             opt_score.update(self.score_head, grads_s)
             mx.eval(self.score_head.parameters(), opt_score.state)
         print(f"  ✅ ScoreHead trained: final loss = {loss_s.item():.4f}")
@@ -281,7 +323,7 @@ def main():
     parser = argparse.ArgumentParser(description="OpenJEV Supervised Head Training & Calibration CLI")
     parser.add_argument("--model-dir", default="./models/qwen2.5-0.5b", help="Path to model directory")
     parser.add_argument("--dataset-dir", default="./train-dataset", help="Path to dataset directory")
-    parser.add_argument("--epochs", type=int, default=20, help="Training epochs")
+    parser.add_argument("--epochs", type=int, default=60, help="Training epochs")
     parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate")
     args = parser.parse_args()
 

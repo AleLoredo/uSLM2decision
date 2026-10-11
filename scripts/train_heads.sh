@@ -10,7 +10,7 @@ cd "$PROJECT_ROOT"
 
 MODEL_DIR="./models/qwen2.5-0.5b"
 DATASET_DIR="./train-dataset"
-EPOCHS="20"
+EPOCHS="60"
 LR="1e-3"
 
 while [[ $# -gt 0 ]]; do

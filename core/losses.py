@@ -48,7 +48,7 @@ def ordinal_score_loss(
     probs: mx.array,
     target_levels: mx.array,
     num_levels: int = 5,
-    sigma: float = 1.0
+    sigma: float = 0.35
 ) -> mx.array:
     """
     Ordinal-aware score loss using Gaussian soft-smoothed target distributions.

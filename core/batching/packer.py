@@ -49,6 +49,19 @@ def extract_question_text(q: Dict[str, Any]) -> str:
         if crit:
             return f"{instructions} {crit}".strip()
         return instructions
+    elif q_type == "score":
+        crit = q.get("criteria", [])
+        if isinstance(crit, list) and crit:
+            rubric_str = " | ".join(f"Level {i}: {desc}" for i, desc in enumerate(crit))
+            return f"{instructions}. Rubric: {rubric_str}".strip()
+        elif isinstance(crit, str) and crit:
+            return f"{instructions}. Rubric: {crit}".strip()
+        return instructions
+    elif q_type == "choice":
+        crit = q.get("criteria")
+        if isinstance(crit, str) and crit:
+            return f"{instructions} {crit}".strip()
+        return instructions
     return instructions
 
 def pack_requests(
