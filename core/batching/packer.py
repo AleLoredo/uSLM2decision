@@ -35,10 +35,10 @@ class PackedBatch:
 def serialize_state_to_text(state: Any) -> str:
     """Serializes state (string or structured JSON) to text for tokenization."""
     if isinstance(state, str):
-        return state
+        return state.strip()
     if isinstance(state, (dict, list)):
-        return json.dumps(state, ensure_ascii=False, indent=2)
-    return str(state)
+        return json.dumps(state, ensure_ascii=False, indent=2).strip()
+    return str(state).strip()
 
 def extract_question_text(q: Dict[str, Any]) -> str:
     """Extracts text representation from question dictionary."""

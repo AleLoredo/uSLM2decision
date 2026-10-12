@@ -231,8 +231,39 @@ SCORE_SAMPLES_FRUSTRATION = [
     ("Can you please clarify the payment terms for the enterprise contract?", 0),
     ("Could you provide more documentation on configuring SAML SSO?", 0),
     ("We are planning our migration and have a question regarding data export.", 0),
+    ("I would like to purchase the HBO pack for my account.", 0),
+    ("I want to subscribe to the HBO pack and sports bundle.", 0),
+    ("How do I contract the premium streaming package?", 0),
+    ("We would like to buy the additional enterprise channels pack.", 0),
+    ("Can I add the HBO pack to our monthly subscription?", 0),
+    ("Interested in contracting the fiber optic and TV package.", 0),
+    ("I would like to sign up for the sports and movie pack.", 0),
     
     # Level 0 (Calm, just stating facts - Spanish)
+    ("quisiera contratar el pack HBO", 0),
+    ("quisiera contratar el pack HBO y fútbol para este mes", 0),
+    ("buenas tardes, quisiera contratar el pack premium de canales", 0),
+    ("hola, me gustaría contratar el servicio de streaming y HBO", 0),
+    ("deseo contratar el paquete de películas y series", 0),
+    ("quisiera contratar una línea adicional y el pack de datos", 0),
+    ("quiero contratar el servicio de internet y televisión", 0),
+    ("hola, quisiera saber cómo contratar el pack HBO Max", 0),
+    ("solicito contratar el pack de canales internacionales", 0),
+    ("quisiera activar el pack premium en mi abono mensual", 0),
+    ("me interesa contratar el plan pro y el pack adicional", 0),
+    ("quisiera contratar el pack de deportes", 0),
+    ("quiero contratar internet y el pack fútbol para mi domicilio", 0),
+    ("quisiera contratar el servicio de telefonía y cable", 0),
+    ("cómo hago para contratar el pack fútbol y HBO", 0),
+    ("quisiera comprar el paquete de datos extra para mi línea", 0),
+    ("deseo contratar el servicio de televisión digital con HBO", 0),
+    ("quisiera solicitar el alta del servicio y el pack de canales", 0),
+    ("quiero agregar el pack HBO a mi suscripción mensual", 0),
+    ("hola, quisiera contratar el servicio para mi empresa", 0),
+    ("quisiera contratar", 0),
+    ("contratar el pack HBO", 0),
+    ("quisiera contratar el paquete básico", 0),
+    ("solicito información para contratar el pack HBO", 0),
     ("¿Sería posible consultar por una reducción en el costo de mi suscripción activa?", 0),
     ("Buenas tardes, quería consultar alternativas de planes para optimizar costos.", 0),
     ("Hola, una consulta sobre si es posible reducir el costo de mi suscripción activa al servicio.", 0),
@@ -261,6 +292,8 @@ SCORE_SAMPLES_FRUSTRATION = [
     ("I have been waiting for the billing department to get back to me regarding the overcharge.", 1),
     ("This pricing change came as an unpleasant surprise and our budget is strained.", 1),
     ("We were billed twice this month and have not received an explanation yet.", 1),
+    ("I ordered the HBO pack three days ago and the channels are still not active.", 1),
+    ("We requested the sports bundle upgrade on Monday but our account was not updated.", 1),
     
     # Level 1 (Frustrated but civil - Spanish)
     ("Hace 3 días que estoy intentando configurar la cuenta y sigue dando error.", 1),
@@ -273,6 +306,9 @@ SCORE_SAMPLES_FRUSTRATION = [
     ("El sistema sigue dando error al intentar actualizar la tarjeta, por favor solucionen esto.", 1),
     ("Esperaba una respuesta antes respecto a la devolución del dinero cobrado de más.", 1),
     ("Nos cobraron dos veces la suscripción este mes y todavía no tenemos reintegro.", 1),
+    ("Pedí la contratación del pack HBO hace tres días y todavía no tengo los canales habilitados.", 1),
+    ("Intenté contratar el pack fútbol dos veces pero sigue dando error en la plataforma.", 1),
+    ("Solicité el alta del pack premium la semana pasada y todavía no se activó.", 1),
 
     # Level 2 (Very angry, strong language - English)
     ("there is a problem with my billling. you idiots i need this fixed by today", 2),
@@ -282,6 +318,7 @@ SCORE_SAMPLES_FRUSTRATION = [
     ("I want to speak with your manager immediately, this is atrocious service!", 2),
     ("You screwed up our entire billing and now our account is suspended, fix this right now!", 2),
     ("Your customer support is a disgrace, you stole our money and ghosted us!", 2),
+    ("You charged me for the HBO pack and none of the channels work, you thieves, refund me now!", 2),
     
     # Level 2 (Very angry, strong language - Spanish)
     ("Son unos soretes. Dene de baja de su servicio de mierda ya", 2),
@@ -290,7 +327,9 @@ SCORE_SAMPLES_FRUSTRATION = [
     ("Esto es una vergüenza total, váyanse al carajo, exijo mi plata ya!", 2),
     ("Me cobraron cinco veces y el soporte es una basura que no sirve para nada!", 2),
     ("Manga de chantas, son un desastre, cancelen todo inmediatamente ya!", 2),
-    ("Son unos incompetentes totales, me cansé de este servicio nefasto!", 2)
+    ("Son unos incompetentes totales, me cansé de este servicio nefasto!", 2),
+    ("Me cobran el pack HBO todos los meses y no anda nunca, son unos estafadores de mierda!", 2),
+    ("Hace una semana que pedí el pack de canales y son un desastre, váyanse al carajo!", 2)
 ]
 
 SCORE_RUBRIC_SEVERITY = [

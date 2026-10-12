@@ -144,3 +144,54 @@ def test_polite_commercial_query_frustration_regression(initialized_engine):
     assert probs["0"] > 0.60, f"Expected Calm probability > 60%, got {probs['0']}"
     assert probs["2"] < 0.15, f"Expected Angry probability < 15%, got {probs['2']}"
 
+def test_commercial_pack_contracting_frustration_regression(initialized_engine):
+    """
+    Regression Test: Commercial pack contracting inquiry ("quisiera contratar el pack HBO ")
+    must be resolved to Level 0 (Calm) and sales routing, without elevated anger/frustration.
+    """
+    state = "quisiera contratar el pack HBO "
+    questions = {
+        "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this",
+            "criteria": {
+                "billing": "Payment or subscription issues",
+                "technical": "Bugs or integration problems",
+                "sales": "Pricing or account questions"
+            }
+        },
+        "frustration": {
+            "type": "score",
+            "instructions": "How frustrated the customer appears",
+            "criteria": [
+                "Calm, just stating facts",
+                "Frustrated but civil",
+                "Very angry, strong language"
+            ]
+        },
+        "is_urgent": {
+            "type": "noul",
+            "instructions": "The message conveys urgency or time-sensitivity"
+        }
+    }
+    
+    res = initialized_engine.decide(state, questions)
+    answers = res["answers"]
+    
+    # 1. Choice should route to sales
+    assert answers["department"]["choice"] == "sales"
+    assert answers["department"]["confidence"] >= 0.85
+    
+    # 2. Noul should indicate non-urgent (0)
+    assert answers["is_urgent"]["noul"] == 0
+    
+    # 3. Score must be Level 0 (Calm, expected score < 0.50)
+    frust = answers["frustration"]
+    probs = frust["probabilities"]
+    modal_level = max(probs, key=probs.get)
+    assert modal_level == "0", f"Expected modal level 0 (Calm), got {modal_level} with probs {probs}"
+    assert frust["score"] < 0.50, f"Expected score < 0.50 (Calm), got {frust['score']}"
+    assert probs["0"] > 0.65, f"Expected Calm probability > 65%, got {probs['0']}"
+    assert probs["2"] < 0.20, f"Expected Angry probability < 20%, got {probs['2']}"
+
+

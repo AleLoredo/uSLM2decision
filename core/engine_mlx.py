@@ -199,11 +199,17 @@ class MLXInferenceEngine(BaseInferenceEngine):
                 sel = int(sel_idx[0].item())
                 selected_id = options[sel]["id"]
 
+                probs_dict = {opt["id"]: round(p, 4) for opt, p in zip(options, probs_list)}
+                residual_c = round(1.0 - sum(probs_dict.values()), 4)
+                if residual_c != 0.0:
+                    max_k = max(probs_dict, key=probs_dict.get)
+                    probs_dict[max_k] = round(probs_dict[max_k] + residual_c, 4)
+
                 answers[q_id] = {
                     "type": "choice",
                     "choice": selected_id,
                     "confidence": round(float(conf[0].item()), 4),
-                    "probabilities": {opt["id"]: round(p, 4) for opt, p in zip(options, probs_list)}
+                    "probabilities": probs_dict
                 }
             elif q_type == "score":
                 criteria = q.get("criteria", [])
@@ -219,6 +225,10 @@ class MLXInferenceEngine(BaseInferenceEngine):
                 probs_list = [float(p) for p in s_out["distribution"][0].tolist()][:num_levels]
                 sum_p = sum(probs_list) or 1.0
                 probs_dict = {str(i): round(p / sum_p, 4) for i, p in enumerate(probs_list)}
+                residual_s = round(1.0 - sum(probs_dict.values()), 4)
+                if residual_s != 0.0:
+                    max_k = max(probs_dict, key=probs_dict.get)
+                    probs_dict[max_k] = round(probs_dict[max_k] + residual_s, 4)
                 confidence_val = max(probs_dict.values())
 
                 answers[q_id] = {
