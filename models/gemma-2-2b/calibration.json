@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "model": "gemma-2-2b",
+  "status": "calibrated",
+  "temperatures": {
+    "bool": 0.5,
+    "choice": 1.0,
+    "score": 1.0
+  },
+  "timestamp": "2026-10-12T02:43:49Z"
+}

@@ -50,7 +50,8 @@ class HeadTrainer:
         import mlx_lm
         self.model, self.tokenizer = mlx_lm.load(model_dir)
         self.backbone = self.model.model
-        print("[OpenJEV Trainer] Loaded Qwen transformer backbone on Metal GPU (Frozen)")
+        backbone_name = self.backbone.__class__.__name__
+        print(f"[OpenJEV Trainer] Loaded {backbone_name} transformer backbone on Metal GPU (Frozen)")
 
         # Instantiate Decision Heads
         self.bool_head = BoolHead(hidden_dim=self.hidden_dim)

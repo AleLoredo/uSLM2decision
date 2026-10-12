@@ -37,7 +37,7 @@ while [[ $# -gt 0 ]]; do
       echo "Opciones:"
       echo "  --model, -m <dir>     Directorio del modelo (por defecto: ./models/qwen2.5-0.5b)"
       echo "  --dataset, -d <dir>   Directorio del dataset (por defecto: ./train-dataset)"
-      echo "  --epochs, -e <N>      Épocas de optimización (por defecto: 20)"
+      echo "  --epochs, -e <N>      Épocas de optimización (por defecto: 100)"
       echo "  --lr <rate>           Tasa de aprendizaje (por defecto: 1e-3)"
       echo "  --help, -h            Muestra esta ayuda"
       exit 0

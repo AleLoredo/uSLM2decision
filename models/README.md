@@ -8,13 +8,18 @@ Cada subdirectorio representa un modelo disponible (por ejemplo `models/qwen2.5-
 
 ```text
 models/
-  ├── qwen2.5-0.5b/
-  │     ├── config.json             # Metadatos del backbone (Hugging Face)
-  │     ├── tokenizer.json          # Tokenizador BPE
-  │     ├── tokenizer_config.json
-  │     ├── model.safetensors       # Pesos del backbone (o *.safetensors en 4-bit)
-  │     ├── heads.safetensors       # Cabezales canónicos de decisión (Requerido)
-  │     └── heads_metadata.json     # Manifiesto de formas y procedencia
+  ├── qwen2.5-0.5b/             # Fast tier (hidden_dim=896, 24 capas, ~380 MB)
+  │     ├── config.json
+  │     ├── tokenizer.json
+  │     ├── model.safetensors
+  │     ├── heads.safetensors   # Cabezales entrenados (d=896)
+  │     └── calibration.json
+  ├── gemma-2-2b/               # Balanced tier (hidden_dim=2304, 26 capas, ~1.4 GB)
+  │     ├── config.json
+  │     ├── tokenizer.json
+  │     ├── model.safetensors
+  │     ├── heads.safetensors   # Cabezales entrenados (d=2304)
+  │     └── calibration.json
   └── README.md
 ```
 
@@ -40,4 +45,5 @@ python -m core.model_scanner --model-dir ./models/qwen2.5-0.5b --init-heads
 
 # Verificar la integridad de un heads.safetensors existente
 python -m core.model_scanner --model-dir ./models/qwen2.5-0.5b --verify
+python -m core.model_scanner --model-dir ./models/gemma-2-2b --verify
 ```

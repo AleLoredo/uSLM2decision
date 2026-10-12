@@ -68,12 +68,25 @@ if [ "$MODE_CHOICE" = "2" ]; then
     fi
   else
     # Opción [D]: Descarga asistida de Hugging Face
-    repo_id="mlx-community/Qwen2.5-0.5B-4bit"
-    if [ "$OS_TYPE" != "Darwin" ]; then
-      repo_id="Qwen/Qwen2.5-0.5B"
+    echo ""
+    echo "¿Qué modelo deseas descargar?"
+    echo "  [1] Qwen2.5-0.5B-4bit (Fast tier, ~380 MB, Recomendado para baja latencia)"
+    echo "  [2] Gemma-2-2b-it-4bit (Balanced tier, ~1.4 GB, Mayor capacidad semántica)"
+    read -r -p "Selecciona una opción [1/2] (por defecto: 1): " MODEL_SUBCHOICE
+    MODEL_SUBCHOICE="${MODEL_SUBCHOICE:-1}"
+
+    if [ "$MODEL_SUBCHOICE" = "2" ]; then
+      repo_id="mlx-community/gemma-2-2b-it-4bit"
+      model_name="gemma-2-2b"
+    else
+      repo_id="mlx-community/Qwen2.5-0.5B-4bit"
+      if [ "$OS_TYPE" != "Darwin" ]; then
+        repo_id="Qwen/Qwen2.5-0.5B"
+      fi
+      model_name="qwen2.5-0.5b"
     fi
 
-    target_dir="./models/qwen2.5-0.5b"
+    target_dir="./models/$model_name"
     mkdir -p "$target_dir"
     echo ""
     echo "-> Descargando '$repo_id' desde Hugging Face hacia $target_dir..."
@@ -82,8 +95,8 @@ if [ "$MODE_CHOICE" = "2" ]; then
     echo "-> Inicializando cabezales canónicos heads.safetensors en $target_dir..."
     python3 -m core.model_scanner --model-dir "$target_dir" --init-heads
 
-    python3 -m core.config --set-mode real --set-model qwen2.5-0.5b --set-backbone "$target_dir" --set-heads "$target_dir/heads.safetensors"
-    echo "✅ Modelo default Qwen2.5-0.5B descargado y configurado exitosamente."
+    python3 -m core.config --set-mode real --set-model "$model_name" --set-backbone "$target_dir" --set-heads "$target_dir/heads.safetensors"
+    echo "✅ Modelo $model_name descargado y configurado exitosamente."
   fi
 else
   python3 -m core.config --set-mode mock
