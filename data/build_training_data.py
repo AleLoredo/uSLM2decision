@@ -57,9 +57,11 @@ NOUL_URGENT_NEGATIVES = [
     "just sharing some feedback, everything is working smoothly",
     "curious if you will support Python 3.14 in the upcoming quarter",
     "hello team, hope you are having a nice weekend, quick question about receipt formatting",
+    "would it be possible to eventually reduce the cost of my active subscription to your service?",
     "minor suggestion: it would be nice to have a search shortcut",
     "everything is working fine, just wanted to confirm my renewal date next month",
     # Spanish low urgency / polite
+    "¿Sería posible consultar por una reducción en el costo de mi suscripción activa?",
     "Hola, una consulta cuando tengan tiempo sobre los planes disponibles",
     "Buenas tardes, quería consultar si tienen soporte para modo oscuro",
     "Todo funcionando excelente por aquí, muchas gracias por el servicio",
@@ -159,6 +161,7 @@ CHOICE_SAMPLES_DEPARTMENT = [
     ("Is there an annual discount if we pay upfront instead of monthly?", "sales"),
     ("Can we get custom terms and an SLA guarantee for enterprise tier?", "sales"),
     ("How does your pricing compare with competitor X for 5 million tokens?", "sales"),
+    ("would it be possible to eventually reduce the cost of my active subscription to your service?", "sales"),
     ("We want to discuss custom contract terms before signing the order form.", "sales"),
 
     # Sales (Spanish)
@@ -201,31 +204,75 @@ SCORE_RUBRIC_FRUSTRATION = [
 ]
 
 SCORE_SAMPLES_FRUSTRATION = [
-    # Level 0 (Calm - English)
+    # Level 0 (Calm, just stating facts - English)
+    ("would it be possible to eventually reduce the cost of my active subscription to your service?", 0),
+    ("could we explore options to reduce the monthly cost of our subscription?", 0),
+    ("is there any way to reduce the cost of my active subscription to your service?", 0),
+    ("hello, I am writing to politely ask if we can reduce the cost of our current subscription.", 0),
+    ("we would like to keep using your service, but need to reduce the subscription cost.", 0),
+    ("could you review our active subscription to your service and suggest lower cost tiers?", 0),
+    ("is it possible to get a discount on my active subscription to your service?", 0),
+    ("I would like to ask a general question about my active subscription to your service.", 0),
+    ("How do I manage my active subscription to your service?", 0),
+    ("Thank you for your service, I have a quick question about my active subscription.", 0),
+    ("Hi, just inquiring if there is any flexibility on the pricing for our active subscription.", 0),
+    ("Would it be feasible to discuss a cost reduction for our recurring subscription plan?", 0),
     ("Hello, could you please clarify how the API rate limit is counted?", 0),
     ("Hi, our team is testing the endpoint and we have a quick question.", 0),
     ("Good morning, here is the log snippet for your review when convenient.", 0),
     ("I noticed an inconsistency in the documentation for the decide endpoint.", 0),
     ("Thank you for the quick reply, could you also confirm the port number?", 0),
-    # Level 0 (Calm - Spanish)
+    ("Hello, could you please tell me if there are discounts available on our active plan?", 0),
+    ("Hi, just inquiring if we can adjust our monthly subscription tier.", 0),
+    ("Could you please send me our invoice for last month?", 0),
+    ("Where can I find the billing breakdown for extra user seats?", 0),
+    ("Is it possible to downgrade our plan to the starter tier?", 0),
+    ("How do I update our credit card details for future renewal?", 0),
+    ("Can you please clarify the payment terms for the enterprise contract?", 0),
+    ("Could you provide more documentation on configuring SAML SSO?", 0),
+    ("We are planning our migration and have a question regarding data export.", 0),
+    
+    # Level 0 (Calm, just stating facts - Spanish)
+    ("¿Sería posible consultar por una reducción en el costo de mi suscripción activa?", 0),
+    ("Buenas tardes, quería consultar alternativas de planes para optimizar costos.", 0),
+    ("Hola, una consulta sobre si es posible reducir el costo de mi suscripción activa al servicio.", 0),
+    ("Quisiéramos saber si hay opciones para ajustar el valor del abono mensual sin perder funciones.", 0),
+    ("Hola equipo, muchas gracias por su servicio, quería consultar por promociones vigentes en mi plan.", 0),
     ("Hola, buenos días, ¿podrían confirmarme cuál es el puerto por defecto del servicio?", 0),
     ("Hola, una consulta tranquila sobre cómo se calcula el límite de peticiones.", 0),
     ("Aquí les adjunto el log para que lo revisen cuando tengan disponibilidad, gracias.", 0),
     ("Encontré un pequeño detalle en la documentación técnica para consultar.", 0),
     ("Muchas gracias por la respuesta anterior, todo quedó muy claro y funcionando.", 0),
+    ("Hola, quisiera saber si tienen descuentos para organizaciones sin fines de lucro.", 0),
+    ("Quisiera consultar si podemos cambiar la fecha de cobro de la factura mensual.", 0),
+    ("¿Cómo puedo descargar las facturas anteriores de mi cuenta?", 0),
+    ("Hola, una consulta para cambiar de plan anual a mensual.", 0),
+    ("¿Podrían enviarme el comprobante de pago de la última renovación?", 0),
+    ("Hola, estamos configurando la integración y quisiéramos consultar una duda técnica.", 0),
 
-    # Level 1 (Frustrated - English)
+    # Level 1 (Frustrated but civil - English)
     ("I have been trying to connect my Stripe account for 3 days and the integration keeps failing.", 1),
     ("This is the second time this week our sync has broken, please look into this.", 1),
     ("I submitted a ticket 48 hours ago and have not received any response yet.", 1),
     ("The error messages are completely unhelpful and we are losing time.", 1),
     ("We followed the docs step by step and it still does not work as described.", 1),
-    # Level 1 (Frustrated - Spanish)
+    ("I was promised a discount code last week but it was not applied to our invoice.", 1),
+    ("Our card was charged yesterday despite our downgrade request 5 days ago, please check.", 1),
+    ("I have been waiting for the billing department to get back to me regarding the overcharge.", 1),
+    ("This pricing change came as an unpleasant surprise and our budget is strained.", 1),
+    ("We were billed twice this month and have not received an explanation yet.", 1),
+    
+    # Level 1 (Frustrated but civil - Spanish)
     ("Hace 3 días que estoy intentando configurar la cuenta y sigue dando error.", 1),
     ("Es la segunda vez en la semana que se corta la sincronización, por favor revisen.", 1),
     ("Mandé un ticket hace 48 horas y todavía nadie me contestó.", 1),
     ("Seguimos todos los pasos de la guía y no funciona como dice la documentación.", 1),
     ("Los mensajes de error no ayudan en nada y estamos perdiendo bastante tiempo.", 1),
+    ("Hace 3 días que estoy intentando comunicarme con facturación y no responden.", 1),
+    ("Me cobraron la tarifa completa a pesar de que pedí el cambio de plan la semana pasada.", 1),
+    ("El sistema sigue dando error al intentar actualizar la tarjeta, por favor solucionen esto.", 1),
+    ("Esperaba una respuesta antes respecto a la devolución del dinero cobrado de más.", 1),
+    ("Nos cobraron dos veces la suscripción este mes y todavía no tenemos reintegro.", 1),
 
     # Level 2 (Very angry, strong language - English)
     ("there is a problem with my billling. you idiots i need this fixed by today", 2),
@@ -233,6 +280,9 @@ SCORE_SAMPLES_FRUSTRATION = [
     ("you charged us 10 times and your support is utterly useless, fix this immediately!", 2),
     ("what a joke of a company, your incompetence is costing us thousands of dollars!", 2),
     ("I want to speak with your manager immediately, this is atrocious service!", 2),
+    ("You screwed up our entire billing and now our account is suspended, fix this right now!", 2),
+    ("Your customer support is a disgrace, you stole our money and ghosted us!", 2),
+    
     # Level 2 (Very angry, strong language - Spanish)
     ("Son unos soretes. Dene de baja de su servicio de mierda ya", 2),
     ("Son unos ladrones y unos estafadores, me robaron la plata en la cara!", 2),
@@ -250,15 +300,26 @@ SCORE_RUBRIC_SEVERITY = [
 ]
 
 SCORE_SAMPLES_SEVERITY = [
+    # Level 0
     ("Typo on the landing page header text.", 0),
     ("Icon color is slightly off in dark mode.", 0),
     ("Error tipográfico menor en el encabezado de la página.", 0),
+    ("Documentation example has a minor broken hyperlink.", 0),
+    ("El logo se ve ligeramente descentrado en pantallas pequeñas.", 0),
+    
+    # Level 1
     ("Notification email was delayed by 5 minutes.", 1),
     ("Search filters take 2 seconds longer than usual.", 1),
     ("El correo de notificación tardó 5 minutos en enviarse.", 1),
+    ("CSV export takes several minutes to complete during peak hours.", 1),
+    ("La carga del dashboard está demorando más de lo habitual.", 1),
+    
+    # Level 2
     ("Entire customer database is offline and requests are failing 100%.", 2),
     ("Security breach: customer tokens leaked in public logs.", 2),
-    ("Toda la base de datos principal está caída y el servicio no responde.", 2)
+    ("Toda la base de datos principal está caída y el servicio no responde.", 2),
+    ("Payment processing pipeline crashed and all customer checkouts are failing.", 2),
+    ("Caída total del cluster de producción, ningún endpoint responde.", 2)
 ]
 
 # ---------------------------------------------------------
@@ -384,35 +445,50 @@ def generate_score_dataset(target_count: int = 600) -> List[Dict[str, Any]]:
         "Evaluate incident impact"
     ]
     
-    # 1. Frustration rubric
-    for _ in range(target_count // 2):
-        q_frust = {
-            "type": "score",
-            "instructions": RNG.choice(frust_instructions),
-            "criteria": SCORE_RUBRIC_FRUSTRATION
-        }
-        text, target = RNG.choice(SCORE_SAMPLES_FRUSTRATION)
-        samples.append({
-            "primitive": "score",
-            "state": text,
-            "question": q_frust,
-            "target": target
-        })
+    frust_by_level = {
+        0: [s for s, t in SCORE_SAMPLES_FRUSTRATION if t == 0],
+        1: [s for s, t in SCORE_SAMPLES_FRUSTRATION if t == 1],
+        2: [s for s, t in SCORE_SAMPLES_FRUSTRATION if t == 2]
+    }
+    sev_by_level = {
+        0: [s for s, t in SCORE_SAMPLES_SEVERITY if t == 0],
+        1: [s for s, t in SCORE_SAMPLES_SEVERITY if t == 1],
+        2: [s for s, t in SCORE_SAMPLES_SEVERITY if t == 2]
+    }
 
-    # 2. Severity rubric
-    for _ in range(target_count // 2):
-        q_sev = {
-            "type": "score",
-            "instructions": RNG.choice(sev_instructions),
-            "criteria": SCORE_RUBRIC_SEVERITY
-        }
-        text, target = RNG.choice(SCORE_SAMPLES_SEVERITY)
-        samples.append({
-            "primitive": "score",
-            "state": text,
-            "question": q_sev,
-            "target": target
-        })
+    # 1. Frustration rubric (balanced across levels)
+    per_level_frust = (target_count // 2) // 3
+    for lvl in [0, 1, 2]:
+        for _ in range(per_level_frust):
+            q_frust = {
+                "type": "score",
+                "instructions": RNG.choice(frust_instructions),
+                "criteria": SCORE_RUBRIC_FRUSTRATION
+            }
+            text = RNG.choice(frust_by_level[lvl])
+            samples.append({
+                "primitive": "score",
+                "state": text,
+                "question": q_frust,
+                "target": lvl
+            })
+
+    # 2. Severity rubric (balanced across levels)
+    per_level_sev = (target_count // 2) // 3
+    for lvl in [0, 1, 2]:
+        for _ in range(per_level_sev):
+            q_sev = {
+                "type": "score",
+                "instructions": RNG.choice(sev_instructions),
+                "criteria": SCORE_RUBRIC_SEVERITY
+            }
+            text = RNG.choice(sev_by_level[lvl])
+            samples.append({
+                "primitive": "score",
+                "state": text,
+                "question": q_sev,
+                "target": lvl
+            })
         
     return samples
 

@@ -45,10 +45,11 @@ def choice_cross_entropy_loss(
     return -mx.mean(selected_log_probs)
 
 def ordinal_score_loss(
-    probs: mx.array,
+    inputs: mx.array,
     target_levels: mx.array,
     num_levels: int = 5,
-    sigma: float = 0.35
+    sigma: float = 0.35,
+    from_logits: bool = False
 ) -> mx.array:
     """
     Ordinal-aware score loss using Gaussian soft-smoothed target distributions.
@@ -56,10 +57,11 @@ def ordinal_score_loss(
     ensuring distant level mistakes receive strictly higher loss penalization.
     
     Args:
-        probs: Predicted level probabilities (B, M)
+        inputs: Predicted level probabilities or raw logits (B, M)
         target_levels: Ground truth level integers in [0, M-1], shape (B,)
         num_levels: Number of discrete levels M
         sigma: Soft-label smoothing bandwidth (controls ordinal distance decay)
+        from_logits: Whether inputs are raw logits (numerically stable) or probabilities
     """
     levels = mx.arange(num_levels).astype(mx.float32) # (M,)
     levels_grid = mx.expand_dims(levels, 0) # (1, M)
@@ -73,7 +75,13 @@ def ordinal_score_loss(
     soft_targets = soft_targets / mx.sum(soft_targets, axis=-1, keepdims=True) # Normalize
     
     # KL-Divergence / Cross-Entropy over soft ordinal targets
-    log_probs = mx.log(mx.clip(probs, 1e-9, None))
+    if from_logits:
+        # Numerically stable log_softmax: z - logsumexp(z)
+        log_probs = inputs - mx.logsumexp(inputs, axis=-1, keepdims=True)
+    else:
+        log_probs = mx.log(mx.clip(inputs, 1e-9, None))
+        
     loss = -mx.mean(mx.sum(soft_targets * log_probs, axis=-1))
     
     return loss
+

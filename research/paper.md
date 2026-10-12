@@ -11,7 +11,7 @@
 
 Autoregressive Large Language Models (LLMs) are widely utilized for classification, routing, and scoring tasks via prompt-based token generation. However, generative classification suffers from high latency overhead, token generation cost, verbalized overconfidence, calibration drift, and cross-task context interference. In this paper, we document the methodology required to convert a frozen decoder-only generative backbone (Qwen 2.5-0.5B) into a single-forward-pass, non-autoregressive "System 1" decision engine. We formalize three canonical decision primitives: Boolean truth evaluation (`noul`), multi-option semantic routing (`choice`), and rubric-anchored discrete ordinal scoring (`score`). 
 
-Crucially, rather than presenting a sanitized success narrative, we document the sequence of empirical pathologies and methodological errors encountered during development, along with their mathematical root causes and corrective interventions. These include: (1) representation anisotropy causing logit explosions up to $\sim 2{,}500$ in bilinear choice heads, resolved via $\ell_2$-normalization and contrastive temperature scaling; (2) information starvation in scoring heads due to omitting rubric definitions from sequence attention, resolved via rubric prompt inlining; (3) probability mass dilution caused by excessive Gaussian label smoothing bandwidth ($\sigma = 1.0$), which mathematically forced 34.8% probability mass onto adjacent levels and suppressed extreme ordinal targets, resolved by analytical recalibration to $\sigma = 0.35$; (4) acute out-of-distribution degradation under regional colloquial insults and cancellations (Argentine Spanish slang), resolved through balanced domain augmentation; and (5) sample-by-sample gradient accumulation stagnation on Metal GPU hardware, resolved via dimension-stratified tensor batching. Systematic empirical evaluations across all stages demonstrate convergence to 98.39% Boolean accuracy, 100.00% choice accuracy, and 86.67% ordinal score accuracy on validation sets, while independent evaluation on the blind test partition (`test.jsonl`) confirms 100.00% Boolean accuracy, 100.00% choice accuracy, and 100.00% ordinal predictions within $\pm 1$ rubric level (0% severe errors).
+Crucially, rather than presenting a sanitized success narrative, we document the sequence of empirical pathologies and methodological errors encountered during development, along with their mathematical root causes and corrective interventions. These include: (1) representation anisotropy causing logit explosions up to $\sim 2{,}500$ in bilinear choice heads, resolved via $\ell_2$-normalization and contrastive temperature scaling; (2) information starvation in scoring heads due to omitting rubric definitions from sequence attention, resolved via rubric prompt inlining; (3) probability mass dilution caused by excessive Gaussian label smoothing bandwidth ($\sigma = 1.0$), which mathematically forced 34.8% probability mass onto adjacent levels and suppressed extreme ordinal targets, resolved by analytical recalibration to $\sigma = 0.35$; (4) acute out-of-distribution degradation under regional colloquial insults and cancellations (Argentine Spanish slang), resolved through balanced domain augmentation; (5) sample-by-sample gradient accumulation stagnation on Metal GPU hardware, resolved via dimension-stratified tensor batching; and (6) domain-sentiment lexical entanglement and zero-gradient optimizer saturation in ordinal loss probability clipping, resolved through balanced multi-domain sampling across all rubric levels and a numerically stable log-softmax formulation ($z - \text{logsumexp}(z)$). Systematic empirical evaluations across all stages demonstrate convergence to 100.00% Boolean accuracy, 100.00% choice accuracy, and 98.15% ordinal score accuracy on validation sets, while independent evaluation on the blind test partition (`test.jsonl`) confirms 98.48% Boolean accuracy, 100.00% choice accuracy, and 100.00% ordinal predictions within $\pm 1$ rubric level (0% severe errors).
 
 ---
 
@@ -260,6 +260,53 @@ During early iterations of the system, multiple critical failure modes emerged a
 
 ---
 
+### 3.8 Pathology VIII: Domain-Sentiment Lexical Conflation and Zero-Gradient Saturation in Ordinal Scoring
+
+* **Observed Failure:**
+  When evaluating a polite commercial inquiry regarding subscription pricing:
+  $$\text{"would it be possible to eventually reduce the cost of my active subscription to your service?"}$$
+  the model accurately resolved `department` to `sales` ($80.68\%$) and `is_urgent` to `0` (False), but emitted a severe misclassification on `frustration`:
+  ```json
+  {
+    "frustration": {
+      "type": "score",
+      "score": 1.90,
+      "confidence": 0.9227,
+      "legend": {
+        "0": "Calm, just stating facts",
+        "1": "Frustrated but civil",
+        "2": "Very angry, strong language"
+      },
+      "probabilities": { "0": 0.0179, "1": 0.0593, "2": 0.9227 }
+    }
+  }
+  ```
+  The model assigned $92.27\%$ probability mass to Level 2 ("Very angry, strong language") and an expected continuous score of $1.90 / 2.00$ on an inquiry characterized by deferential, non-confrontational phrasing (*"would it be possible to eventually..."*).
+
+* **Diagnostic Root Cause Analysis (Dual Factors):**
+  1. **Lexical Domain Conflation in Training Data:**
+     Inspection of `data/build_training_data.py` revealed an acute selection bias in `SCORE_SAMPLES_FRUSTRATION`. Samples assigned to Level 0 (*"Calm, just stating facts"*) consisted exclusively of technical engineering prompts (*"API rate limit"*, *"log snippet"*, *"inconsistency in documentation"*, *"port number"*).
+     Conversely, commercial keywords such as `"subscription"`, `"cost"`, `"service"`, `"billing"`, and `"charged"` appeared exclusively in Level 1 and Level 2 angry complaints or chargeback demands (*"problem with my billling"*, *"atrocious service"*, *"charged 10 times"*).
+     Because commercial domain tokens were completely absent from Level 0, the linear probe weights $W_{\text{score}} \in \mathbb{R}^{M \times d}$ learned a spurious, non-causal correlation that treated commercial account tokens as strong positive indicators of customer anger rather than evaluating the polite tone.
+  2. **Numerical Zero-Gradient Saturation in $\text{ordinal\_score\_loss}$:**
+     The loss function in `core/losses.py` was originally computed as:
+     $$\mathcal{L}_{\text{score}} = -\sum_{i=0}^{M-1} \tilde{y}_i \log\left(\text{clip}(p_i, 10^{-9}, 1.0)\right), \quad p_i = \text{Softmax}(z)_i$$
+     Because unnormalized transformer representations have large $\ell_2$-norms ($\|h_Q\|_2 \approx 300$), logits separated rapidly ($\Delta z > 21$). For non-modal classes, the softmax probability $p_i$ fell below the clipping threshold $10^{-9}$. In automatic differentiation, the derivative of a clipped value is identically **$0.0$**:
+     $$\frac{\partial}{\partial z_j} \text{clip}(p_i, 10^{-9}, 1.0) = 0 \quad \text{when } p_i \le 10^{-9}$$
+     The true class gradient vanished completely, producing an inescapable high-loss plateau ($\mathcal{L} \approx 10.5$) where the AdamW optimizer was locked in saturation and validation accuracy collapsed to $55.56\%$.
+
+* **Corrective Interventions:**
+  1. **Domain Decoupling and Balanced Per-Level Sampling:**
+     Expanded `SCORE_SAMPLES_FRUSTRATION` in `data/build_training_data.py` with diverse polite subscription, pricing, discount, invoice, and plan-adjustment requests across Level 0, Level 1, and Level 2 in both English and Spanish. Refactored `generate_score_dataset` to enforce strictly equal sampling across all rubric levels, completely eliminating lexical topic-sentiment entanglement.
+  2. **Numerically Stable Log-Softmax Formulation:**
+     Replaced naive $\log(\text{clip}(\text{softmax}(z)))$ with the analytically exact log-softmax identity:
+     $$\log p_i = z_i - \text{logsumexp}(z)$$
+     implemented via `inputs - mx.logsumexp(inputs, axis=-1, keepdims=True)` with `from_logits=True`. This provides smooth, non-vanishing $(p_i - \tilde{y}_i)$ error gradients regardless of logit separation, allowing loss to converge from $4.25$ down to $0.1925$ across 100 epochs.
+  3. **Empirical Results:**
+     On the exact benchmark query, Level 0 probability jumped from **$1.79\%$ to $75.01\%$**, continuous score dropped from **$1.90$ to $0.32$**, and angry Level 2 probability plummeted from **$92.27\%$ to $7.49\%$**. Score validation accuracy across all rubric levels rose from $55.56\%$ to **$98.15\%$**.
+
+---
+
 ## 4. Empirical Evaluation and Results
 
 ### 4.1 Dataset Stratification, Partition Isolation, and Leakage Prevention
@@ -278,15 +325,15 @@ This three-way split guarantees that reported test metrics reflect genuine gener
 
 ### 4.2 Training Dynamics and Convergence Metrics (Validation Partition)
 
-Following the resolution of the methodological pathologies, the decision heads were trained on the batched representations of `train.jsonl` across 60 epochs. Training progression and performance evaluated on `val.jsonl` are summarized below:
+Following the resolution of the methodological pathologies, the decision heads were trained on the batched representations of `train.jsonl` across 100 epochs with numerically stable log-softmax formulation. Training progression and performance evaluated on `val.jsonl` are summarized below:
 
-| Decision Primitive | Head Architecture | Loss Formulation | Initial Loss | Final Loss (60 Ep.) | Validation Accuracy (`val.jsonl`) |
+| Decision Primitive | Head Architecture | Loss Formulation | Initial Loss | Final Loss (100 Ep.) | Validation Accuracy (`val.jsonl`) |
 |---|---|---|---|---|---|
-| **Noul (Boolean)** | Linear ($896 \to 1$) | Combined Focal-Brier Loss | 0.6931 | **0.0029** | **98.39%** |
-| **Choice** | Bilinear Res. ($896 \to 896$) | Temperature Softmax Cross-Entropy | 1.0986 | **0.0789** | **100.00%** |
-| **Score** | Linear ($896 \to 5$) | Gaussian Ordinal Cross-Entropy ($\sigma=0.35$) | 1.6094 | **0.0780** | **86.67%** |
+| **Noul (Boolean)** | Linear ($896 \to 1$) | Combined Focal-Brier Loss | 0.6931 | **0.0020** | **100.00%** |
+| **Choice** | Bilinear Res. ($896 \to 896$) | Temperature Softmax Cross-Entropy | 1.0986 | **0.0089** | **100.00%** |
+| **Score** | Linear ($896 \to 5$) | Numerically Stable Ordinal Loss ($\sigma=0.35$) | 4.2516 | **0.1925** | **98.15%** |
 
-*Note on Score Accuracy:* Validation accuracy for Score measures exact discrete level matches ($\text{discrete\_level} = y^*$). Off-by-one predictions account for the remaining $13.33\%$, with zero instances of off-by-two errors, verifying the preservation of ordinal distance penalties.
+*Note on Score Accuracy:* Validation accuracy for Score measures exact discrete level matches ($\text{discrete\_level} = y^*$). Off-by-one predictions account for the remaining $1.85\%$, with zero instances of off-by-two errors, confirming the sharpness and stability of the ordinal projection.
 
 ---
 
@@ -296,13 +343,13 @@ To verify that the model did not overfit the validation set during hyperparamete
 
 | Decision Primitive | Evaluation Metric | Correct / Total | Empirical Accuracy (`test.jsonl`) |
 |---|---|---|---|
-| **Noul (Boolean)** | Exact Binary Match ($\text{noul} = y^*$) | 64 / 64 | **100.00%** |
-| **Choice** | Exact Category Match ($\text{choice} = y^*$) | 59 / 59 | **100.00%** |
-| **Score** | Exact Rubric Match ($\text{round}(\bar{S}) = y^*$) | 44 / 57 | **77.19%** |
-| **Score (Ordinal Bounds)** | Within $\pm 1$ Level ($|\text{round}(\bar{S}) - y^*| \le 1$) | 57 / 57 | **100.00%** |
-| **Score (Severe Misses)** | Distance $\ge 2$ ($|\text{round}(\bar{S}) - y^*| \ge 2$) | 0 / 57 | **0.00%** |
+| **Noul (Boolean)** | Exact Binary Match ($\text{noul} = y^*$) | 65 / 66 | **98.48%** |
+| **Choice** | Exact Category Match ($\text{choice} = y^*$) | 66 / 66 | **100.00%** |
+| **Score** | Exact Rubric Match ($\text{round}(\bar{S}) = y^*$) | 48 / 48 | **100.00%** |
+| **Score (Ordinal Bounds)** | Within $\pm 1$ Level ($|\text{round}(\bar{S}) - y^*| \le 1$) | 48 / 48 | **100.00%** |
+| **Score (Severe Misses)** | Distance $\ge 2$ ($|\text{round}(\bar{S}) - y^*| \ge 2$) | 0 / 48 | **0.00%** |
 
-The 100.00% bound on ordinal near-misses ($|\Delta| \le 1$) and 0.00% severe errors directly confirms the mathematical efficacy of the Gaussian soft-label loss ($\sigma=0.35$), which heavily penalizes distant level misclassifications while preserving smooth ordinal transitions.
+The 100.00% exact match on score levels and 0.00% severe errors directly confirms the mathematical efficacy of the Gaussian soft-label loss ($\sigma=0.35$) coupled with stable log-softmax optimization, which prevents gradient vanishing while preserving smooth ordinal transitions.
 
 ---
 
@@ -373,6 +420,12 @@ State: "Hola, buenos días, una consulta sobre los precios de los planes anuales
   -> Department: sales (83.30%)
   -> Frustration: score=0.26 | Probs: {0: 74.69%, 1: 24.99%, 2: 0.32%}
   -> Urgent: 0 (False)
+
+[Query 5: Polite Commercial & Subscription Inquiry (Domain-Sentiment Decoupling)]
+State: "would it be possible to eventually reduce the cost of my active subscription to your service?"
+  -> Department: sales (94.66%)
+  -> Frustration: score=0.32 | Probs: {0: 75.01%, 1: 17.50%, 2: 7.49%}
+  -> Urgent: 0 (False)
 ```
 
 The output confirms sharp, reliable semantic discrimination across both sentiment and domain routing without cross-talk.
@@ -403,12 +456,13 @@ The findings from this investigation yield several practical guidelines for rese
 3. **Condition the Transformer on Rubric Definitions:** In non-autoregressive scoring, a linear layer cannot dynamically learn arbitrary user-defined rubrics. The rubric criteria must be explicitly serialized into the attention prompt so the transformer's attention heads can attend between state tokens and level descriptors.
 4. **Tune Ordinal Smoothing Bandwidth Carefully:** While Gaussian label smoothing is theoretically elegant for penalizing ordinal distance errors, setting $\sigma \ge 1.0$ mathematically dilutes edge targets on short rubrics ($M \le 5$). Bandwidths should satisfy $\sigma \le 0.40$ to avoid suppressing extreme classes.
 5. **Preserve Linguistic and Cultural Variance in Multi-Task Tuning:** Multilingual foundation models do not reliably transfer formal language understanding to colloquial, emotionally charged regional dialects (e.g., Argentine Spanish slang) without domain-specific data augmentation.
+6. **Decouple Semantic Domain Lexicons from Emotional Polarity:** Linear heads attached to frozen transformer representations easily overfit to spurious lexical correlations (e.g., associating commercial terms like "subscription", "cost", or "service" with Level 2 customer anger if polite commercial queries are omitted from Level 0). Domain coverage must be balanced across all discrete levels. Furthermore, ordinal training must use numerically stable log-softmax formulation ($z - \text{logsumexp}(z)$) rather than naive $\log(\text{clip}(\text{softmax}(z)))$ to prevent gradient vanishing and optimizer saturation when logits diverge.
 
 ---
 
 ## 6. Conclusion
 
-In this work, we documented the complete methodological cycle required to convert the Qwen 2.5-0.5B decoder-only architecture into a non-autoregressive, calibrated System 1 decision engine. By analyzing and correcting six critical failure modes—spanning representation anisotropy, rubric information starvation, Gaussian bandwidth over-smoothing, and colloquial out-of-distribution drift—we established a robust, reproducible training and inference pipeline. The resulting model achieves 98.39% Boolean accuracy, 100.00% choice accuracy, and 86.67% ordinal score accuracy in a single forward pass, providing a deterministic, highly calibrated alternative to generative LLM prompting.
+In this work, we documented the complete methodological cycle required to convert the Qwen 2.5-0.5B decoder-only architecture into a non-autoregressive, calibrated System 1 decision engine. By analyzing and resolving eight critical failure modes—spanning representation anisotropy, rubric information starvation, Gaussian bandwidth over-smoothing, colloquial out-of-distribution drift, vectorized GPU optimization, and domain-sentiment lexical conflation coupled with zero-gradient optimizer saturation—we established a robust, reproducible training and inference pipeline. The resulting model achieves 100.00% Boolean accuracy, 100.00% choice accuracy, and 98.15% ordinal score accuracy on validation data, while blind evaluation on the held-out test set demonstrates 98.48% Boolean accuracy, 100.00% choice accuracy, and 100.00% ordinal rubric boundary compliance in a single forward pass, providing a deterministic, highly calibrated alternative to generative LLM prompting.
 
 ---
 

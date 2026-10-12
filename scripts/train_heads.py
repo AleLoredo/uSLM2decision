@@ -37,7 +37,7 @@ def load_jsonl(path: str) -> List[Dict[str, Any]]:
     return records
 
 class HeadTrainer:
-    def __init__(self, model_dir: str, dataset_dir: str, lr: float = 1e-3, epochs: int = 60):
+    def __init__(self, model_dir: str, dataset_dir: str, lr: float = 1e-3, epochs: int = 100):
         self.model_dir = model_dir
         self.dataset_dir = dataset_dir
         self.lr = lr
@@ -208,8 +208,7 @@ class HeadTrainer:
             total_samples = 0
             for h_q_b, num_levels, targets_b in batches:
                 s_out = model(h_q_b, min_val=0, max_val=num_levels - 1, num_levels=num_levels)
-                probs = s_out["distribution"]
-                loss = ordinal_score_loss(probs, targets_b, num_levels=num_levels)
+                loss = ordinal_score_loss(s_out["logits"], targets_b, num_levels=num_levels, from_logits=True)
                 total_loss = total_loss + loss * targets_b.shape[0]
                 total_samples += targets_b.shape[0]
             return total_loss / max(total_samples, 1)
@@ -323,7 +322,7 @@ def main():
     parser = argparse.ArgumentParser(description="OpenJEV Supervised Head Training & Calibration CLI")
     parser.add_argument("--model-dir", default="./models/qwen2.5-0.5b", help="Path to model directory")
     parser.add_argument("--dataset-dir", default="./train-dataset", help="Path to dataset directory")
-    parser.add_argument("--epochs", type=int, default=60, help="Training epochs")
+    parser.add_argument("--epochs", type=int, default=100, help="Training epochs")
     parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate")
     args = parser.parse_args()
 

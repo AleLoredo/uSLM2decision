@@ -159,7 +159,8 @@ class ScoreHead(nn.Module):
             "discrete_level": discrete_level,
             "confidence": confidence,
             "variance": variance,
-            "distribution": probs
+            "distribution": probs,
+            "logits": logits
         }
 
 class OptionEncoder(nn.Module):
