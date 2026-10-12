@@ -140,6 +140,43 @@ OpenJEV supports two runtime engines depending on your deployment target:
 
 ---
 
+### Switching Active Models (Qwen 2.5 0.5B vs. Gemma 2 2B)
+
+OpenJEV supports multiple model families and tiers out of the box under [`models/`](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/models):
+
+| Model Identifier | Architectural Family | Hidden Dimension | Parameters | Role & Performance |
+|---|---|---|---|---|
+| **`qwen2.5-0.5b`** | Llama-like (SwiGLU, RoPE) | $d=896$ | 0.5B (4-bit, ~380 MB) | **Fast Tier:** Ultra-low latency edge decision routing |
+| **`gemma-2-2b`** | Google Gemma (Sliding-window, RMSNorm $\sqrt{d}$) | $d=2304$ | 2.0B (4-bit, ~1.4 GB) | **Balanced Tier:** High capacity semantic reasoning |
+
+#### Option A: Quick Switching via CLI
+```bash
+# Switch active model to Gemma 2 2B:
+python3 -m core.config --set-mode real \
+  --set-model gemma-2-2b \
+  --set-backbone ./models/gemma-2-2b \
+  --set-heads ./models/gemma-2-2b/heads.safetensors
+
+# Switch active model back to Qwen 2.5 0.5B:
+python3 -m core.config --set-mode real \
+  --set-model qwen2.5-0.5b \
+  --set-backbone ./models/qwen2.5-0.5b \
+  --set-heads ./models/qwen2.5-0.5b/heads.safetensors
+```
+
+#### Option B: Editing `config.yaml`
+Modify the `model` block in [`config.yaml`](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/config.yaml):
+```yaml
+model:
+  base_dir: ./models
+  active_model: gemma-2-2b                  # or "qwen2.5-0.5b"
+  backbone_path: ./models/gemma-2-2b        # or "./models/qwen2.5-0.5b"
+  heads_path: ./models/gemma-2-2b/heads.safetensors
+  calibration_path: ./models/gemma-2-2b/calibration.json
+```
+
+---
+
 ### Running the Server
 
 Use [`run.sh`](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/run.sh) to launch the server. It automatically detects the installed runtime:
