@@ -33,11 +33,11 @@ case "$OS" in
     source .venv/bin/activate
     pip install --upgrade pip
 
-    if [ -f "requirements-macos.txt" ]; then
-      echo "-> Instalando desde requirements-macos.txt..."
-      pip install -r requirements-macos.txt
+    if [ -f "requirements.txt" ]; then
+      echo "-> Instalando desde requirements.txt..."
+      pip install -r requirements.txt
     else
-      echo "-> requirements-macos.txt no encontrado. Usando dependencias por defecto..."
+      echo "-> requirements.txt no encontrado. Usando dependencias por defecto..."
       pip install fastapi "uvicorn[standard]" pydantic numpy mlx pytest pyyaml safetensors huggingface_hub transformers
     fi
 
@@ -111,11 +111,11 @@ case "$OS" in
     source .venv/bin/activate
     pip install --upgrade pip
 
-    if [ -f "requirements-linux.txt" ]; then
-      echo "-> Instalando desde requirements-linux.txt..."
-      pip install -r requirements-linux.txt
+    if [ -f "requirements.txt" ]; then
+      echo "-> Instalando desde requirements.txt..."
+      pip install -r requirements.txt
     else
-      echo "-> requirements-linux.txt no encontrado. Usando dependencias por defecto..."
+      echo "-> requirements.txt no encontrado. Usando dependencias por defecto..."
       pip install fastapi "uvicorn[standard]" pydantic numpy torch pytest pyyaml safetensors huggingface_hub transformers
     fi
 

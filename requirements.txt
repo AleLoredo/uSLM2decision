@@ -1,0 +1,15 @@
+# OpenJEV Dependencies
+# Core dependencies common to all platforms
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+pydantic>=2.6.0
+numpy>=1.26.0
+pytest>=8.0.0
+pyyaml>=6.0
+safetensors>=0.4.0
+huggingface_hub>=0.23.0
+transformers>=4.40.0
+
+# Platform-specific ML acceleration backends (PEP 508 markers)
+mlx>=0.11.0; sys_platform == 'darwin' and platform_machine == 'arm64'
+torch>=2.2.0; sys_platform != 'darwin' or platform_machine != 'arm64'

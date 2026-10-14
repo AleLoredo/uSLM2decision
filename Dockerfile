@@ -20,11 +20,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Copiar primero únicamente el archivo de requerimientos para optimizar el cache de Docker
-COPY requirements-linux.txt .
+COPY requirements.txt .
 
 # Instalar dependencias de Python (apuntando al índice oficial con CUDA si aplica)
 RUN pip3 install --no-cache-dir --upgrade pip && \
-    pip3 install --no-cache-dir -r requirements-linux.txt
+    pip3 install --no-cache-dir -r requirements.txt
 
 # Copiar el resto del código del repositorio
 COPY . .
