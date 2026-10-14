@@ -119,6 +119,18 @@ pytest tests/ -v
 
 ---
 
+## 📊 Training & Evaluation Datasets (`train-dataset/`)
+
+OpenJEV bundles a bilingual (English / Spanish) multi-task dataset partitioned in JSON Lines (`.jsonl`) format under [`train-dataset/`](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/train-dataset/):
+
+- **`train.jsonl` (1,440 samples / 80% split):** Consumed by [`scripts/train_heads.py`](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scripts/train_heads.py) to train decision task heads (`heads.safetensors`) via supervised linear probing while keeping the transformer backbone frozen.
+- **`val.jsonl` (180 samples / 10% split):** Evaluated during head training to monitor validation accuracy and fit the **Post-Hoc Temperature Scaler** ([`calibration/post_hoc.py`](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/calibration/post_hoc.py)), outputting `calibration.json` to minimize Expected Calibration Error (ECE).
+- **`test.jsonl` (180 samples / 10% split):** Blind held-out evaluation set consumed by [`tests/test_model_effectiveness.py`](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/tests/test_model_effectiveness.py) to assert production readiness on unseen data ($\ge 95\%$ accuracy on `bool`/`choice` and bounded ordinal rubric distance).
+
+> **Note:** The live serving engine ([`server/edge_server.py`](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/server/edge_server.py)) evaluates requests in zero/few-token passes using the compiled weights (`heads.safetensors`) and calibration parameters (`calibration.json`), without querying `.jsonl` files at runtime.
+
+---
+
 ## 📡 Sample API Usage
 
 ### Request (`POST /v1/decide`)

@@ -17,7 +17,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --rust|-r)
       # "$SCRIPT_DIR/scripts/install_rust.sh"
-      echo "⚠️  El runtime nativo de Rust está en desarrollo en la rama 'research' y no está disponible en esta versión pública."
+      echo "⚠️  El runtime nativo de Rust está en desarrollo en la rama 'rsch' y no está disponible en esta versión pública."
       echo "Por favor utiliza el runtime oficial de Python: ./install.sh --python"
       exit 1
       ;;
@@ -53,7 +53,7 @@ echo "============================================================"
 echo "           Selección de Runtime de OpenJEV"
 echo "============================================================"
 echo "Instalando runtime oficial de OpenJEV en Python (Apple MLX / Metal GPU)..."
-echo "(Nota: El backend en Rust está en desarrollo en la rama 'research')"
+echo "(Nota: El backend en Rust está en desarrollo en la rama 'rsch')"
 echo ""
 
 # Ejecución del instalador de Python
