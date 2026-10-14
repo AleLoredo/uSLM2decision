@@ -56,6 +56,7 @@ def test_mock_engine():
     assert answers["department"]["type"] == "choice"
     assert answers["urgency"]["type"] == "score"
 
+@pytest.mark.requires_mlx
 def test_mlx_engine_real_mode():
     with tempfile.TemporaryDirectory() as tmpdir:
         # Initialize canonical heads in tmpdir
@@ -74,7 +75,7 @@ def test_mlx_engine_real_mode():
         engine = create_engine(cfg)
         assert isinstance(engine, MLXInferenceEngine)
 
-        engine.load_model()
+        engine.load_model(require_backbone=False)
         assert engine.is_ready()
 
         res = engine.decide("Account cancellation requested due to price", SAMPLE_QUESTIONS)

@@ -112,8 +112,10 @@ PORT=9000 HOST=127.0.0.1 ./run.sh
 
 ```bash
 source .venv/bin/activate
-PYTHONPATH=. pytest tests/ -v
+pytest tests/ -v
 ```
+
+> **Note:** Tests requiring real model backbones automatically skip if local weights have not been downloaded yet via `./scripts/setup_model.sh`.
 
 ---
 
@@ -126,7 +128,7 @@ curl -X POST http://localhost:8000/v1/decide \
   -H "Content-Type: application/json" \
   -d '{
     "state": "Hi, I have been trying to connect my Stripe account for 3 days and the integration keeps failing. I am losing sales. Please help ASAP.",
-    "model": "jev-latest",
+    "model": "qwen2.5-0.5b",
     "questions": {
       "department": {
         "type": "choice",
@@ -158,7 +160,8 @@ curl -X POST http://localhost:8000/v1/decide \
 
 ```json
 {
-  "model": "jev-1.13.0",
+  "model": "qwen2.5-0.5b",
+  "calibration_version": "calib-canonical-v1",
   "answers": {
     "department": {
       "type": "choice",

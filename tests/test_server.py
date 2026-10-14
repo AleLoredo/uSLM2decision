@@ -36,7 +36,7 @@ def test_metrics_endpoint():
 def test_decide_endpoint_canonical_primitives():
     payload = {
         "state": "Hi, I've been trying to connect my Stripe account for 3 days and the integration keeps failing. I'm losing sales. Please help ASAP.",
-        "model": "jev-latest",
+        "model": "default",
         "questions": {
             "department": {
                 "type": "choice",
@@ -67,7 +67,8 @@ def test_decide_endpoint_canonical_primitives():
     assert response.status_code == 200
 
     data = response.json()
-    assert data["model"].startswith("jev-")
+    assert data["model"] == MODEL_VERSION
+    assert "calibration_version" in data
     assert "answers" in data
     assert "usage" in data
     assert data["usage"]["input_tokens"] > 0

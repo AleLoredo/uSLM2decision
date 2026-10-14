@@ -96,7 +96,7 @@ class NoulQuestionSchema(BaseModel):
 
 class DecideRequest(BaseModel):
     state: Union[str, Dict[str, Any], List[Any]]
-    model: Optional[str] = "jev-latest"
+    model: Optional[str] = "default"
     questions: Dict[str, Union[ChoiceQuestionSchema, ScoreQuestionSchema, NoulQuestionSchema]]
 
 @app.get("/healthz", status_code=status.HTTP_200_OK)
@@ -107,7 +107,11 @@ def healthz():
 def readyz():
     if not engine.is_ready():
         raise HTTPException(status_code=503, detail="Engine is warming up")
-    return {"status": "ready", "model_version": engine.model_version}
+    return {
+        "status": "ready",
+        "model_version": engine.model_version,
+        "calibration_version": engine.calibration_version
+    }
 
 @app.get("/metrics")
 def metrics():
@@ -135,7 +139,7 @@ async def decide(req: DecideRequest):
             request_id=str(uuid.uuid4()),
             state=req.state,
             questions=raw_questions,
-            model=req.model or "jev-latest",
+            model=req.model or "default",
             arrival_time=time.time(),
             loop=loop,
             future=req_future
@@ -197,7 +201,8 @@ async def decide(req: DecideRequest):
         )
 
     return {
-        "model": "jev-1.13.0",
+        "model": engine.model_version,
+        "calibration_version": engine.calibration_version,
         "answers": result["answers"],
         "usage": result["usage"]
     }

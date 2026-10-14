@@ -10,14 +10,25 @@ Verifies:
 import os
 import json
 import pytest
-from core.config import load_config
+from core.config import OpenJEVConfig, ModelConfig
 from core.engine_factory import create_engine
+
+pytestmark = [pytest.mark.requires_mlx, pytest.mark.requires_weights("qwen2.5-0.5b")]
 
 DATASET_PATH = "train-dataset/test.jsonl"
 
 @pytest.fixture(scope="module")
 def initialized_engine():
-    config = load_config()
+    config = OpenJEVConfig(
+        mode="real",
+        model=ModelConfig(
+            active_model="qwen2.5-0.5b",
+            backbone_path="./models/qwen2.5-0.5b",
+            heads_path="./models/qwen2.5-0.5b/heads.safetensors",
+            calibration_path="./models/qwen2.5-0.5b/calibration.json",
+            backend="mlx"
+        )
+    )
     engine = create_engine(config)
     engine.load_model()
     return engine

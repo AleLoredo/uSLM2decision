@@ -86,14 +86,28 @@ class OpenJEVConfig(BaseModel):
         return missing
 
 def load_config(config_path: str = DEFAULT_CONFIG_PATH) -> OpenJEVConfig:
-    """Loads configuration from YAML file or returns default OpenJEVConfig."""
-    path = Path(config_path)
+    """Loads configuration from YAML file or returns default OpenJEVConfig.
+    Respects OPENJEV_CONFIG and OPENJEV_MODE environment variables for the default configuration.
+    """
+    if config_path == DEFAULT_CONFIG_PATH:
+        env_config = os.getenv("OPENJEV_CONFIG")
+        path = Path(env_config if env_config else config_path)
+    else:
+        path = Path(config_path)
+
     if path.is_file():
         with open(path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
         config = OpenJEVConfig(**data)
     else:
         config = OpenJEVConfig()
+
+    # Only apply OPENJEV_MODE override when loading the primary/default server configuration
+    if config_path == DEFAULT_CONFIG_PATH:
+        env_mode = os.getenv("OPENJEV_MODE")
+        if env_mode in ("mock", "real"):
+            config.mode = env_mode
+
     return config
 
 def save_config(config: OpenJEVConfig, config_path: str = DEFAULT_CONFIG_PATH) -> None:

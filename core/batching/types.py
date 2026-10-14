@@ -13,7 +13,7 @@ class QueuedRequest:
     request_id: str
     state: Union[str, Dict[str, Any], list]
     questions: Dict[str, Dict[str, Any]]
-    model: Optional[str] = "jev-latest"
+    model: Optional[str] = "default"
     arrival_time: float = field(default_factory=time.time)
     loop: Optional[asyncio.AbstractEventLoop] = None
     future: Optional[asyncio.Future] = None

@@ -37,7 +37,7 @@ class MLXInferenceEngine(BaseInferenceEngine):
         self.choice_head = None
         self.score_head = None
 
-    def load_model(self) -> None:
+    def load_model(self, auto_init_heads: bool = False, require_backbone: bool = True) -> None:
         """Loads backbone tokenizer and decision heads into Metal GPU memory."""
         backbone_dir = self.config.model.backbone_path
         heads_path = self.config.model.heads_path
@@ -47,8 +47,14 @@ class MLXInferenceEngine(BaseInferenceEngine):
 
         # 2. Check and initialize canonical heads if not present
         if not os.path.isfile(heads_path):
-            heads_path = init_canonical_heads(backbone_dir, hidden_dim=self.hidden_dim)
-            self.config.model.heads_path = heads_path
+            if auto_init_heads:
+                heads_path = init_canonical_heads(backbone_dir, hidden_dim=self.hidden_dim)
+                self.config.model.heads_path = heads_path
+            else:
+                raise FileNotFoundError(
+                    f"Decision task heads not found at '{heads_path}'. "
+                    f"Run './scripts/init_heads.sh {backbone_dir}' or './scripts/setup_model.sh' to initialize."
+                )
 
         # 3. Strictly verify canonical heads against hidden_dim
         verify_canonical_heads(heads_path, self.hidden_dim)
@@ -73,21 +79,34 @@ class MLXInferenceEngine(BaseInferenceEngine):
             self.score_head.parameters()
         )
 
-        # 6. Load transformer backbone from backbone_dir using mlx_lm
-        try:
-            import mlx_lm
-            self.model, self.tokenizer = mlx_lm.load(backbone_dir)
-            self.backbone = getattr(self.model, "model", getattr(self.model, "transformer", None))
-            if self.backbone is None:
-                raise AttributeError(f"Could not extract transformer backbone from {type(self.model)}")
-            print(f"[OpenJEV MLX Engine] Real backbone loaded: {len(self.backbone.layers)} transformer layers on Metal GPU")
-        except Exception as e:
-            print(f"[OpenJEV MLX Engine] Note: mlx_lm backbone load fallback ({e})")
+        # 6. Resolve calibration version dynamically
+        calib_path = self.config.model.calibration_path
+        if calib_path and os.path.isfile(calib_path):
             try:
-                from transformers import AutoTokenizer
-                self.tokenizer = AutoTokenizer.from_pretrained(backbone_dir, trust_remote_code=False)
+                import json
+                with open(calib_path, "r", encoding="utf-8") as f:
+                    calib_data = json.load(f)
+                self._calibration_version = calib_data.get("calibration_version", "calib-canonical-v1")
             except Exception:
-                self.tokenizer = None
+                self._calibration_version = "uncalibrated"
+        else:
+            self._calibration_version = "uncalibrated"
+
+        # 7. Load transformer backbone from backbone_dir using mlx_lm
+        if require_backbone:
+            try:
+                import mlx_lm
+                self.model, self.tokenizer = mlx_lm.load(backbone_dir)
+                self.backbone = getattr(self.model, "model", getattr(self.model, "transformer", None))
+                if self.backbone is None:
+                    raise AttributeError(f"Could not extract transformer backbone from {type(self.model)}")
+                print(f"[OpenJEV MLX Engine] Real backbone loaded: {len(self.backbone.layers)} transformer layers on Metal GPU")
+            except Exception as e:
+                raise RuntimeError(f"Failed to load MLX transformer backbone from '{backbone_dir}': {e}") from e
+        else:
+            self.model = None
+            self.tokenizer = None
+            self.backbone = None
 
         self._is_ready = True
         print(f"[OpenJEV MLX Engine] Ready. Model: '{self._model_version}' (hidden_dim={self.hidden_dim}) on Metal GPU")

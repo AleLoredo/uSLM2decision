@@ -15,6 +15,8 @@ from core.config import OpenJEVConfig, ModelConfig
 from core.engine_mlx import MLXInferenceEngine
 from core.model_scanner import verify_canonical_heads
 
+pytestmark = [pytest.mark.requires_mlx]
+
 MODELS = [
     {
         "name": "qwen2.5-0.5b",
@@ -39,6 +41,10 @@ MODELS = [
 @pytest.mark.parametrize("model_info", MODELS, ids=lambda m: m["name"])
 def test_model_heads_dimension_integrity(model_info):
     """Verifies that each model's heads.safetensors matches its exact expected hidden_dim."""
+    model_name = model_info["name"]
+    from tests.conftest import _has_model_heads
+    if not _has_model_heads(model_name):
+        pytest.skip(f"Model '{model_name}' heads not found. Run ./scripts/setup_model.sh to download.")
     heads_path = os.path.join(model_info["dir"], "heads.safetensors")
     assert os.path.isfile(heads_path), f"heads.safetensors missing for {model_info['name']}"
     verify_canonical_heads(heads_path, expected_hidden_dim=model_info["expected_dim"])
@@ -46,6 +52,10 @@ def test_model_heads_dimension_integrity(model_info):
 @pytest.mark.parametrize("model_info", MODELS, ids=lambda m: m["name"])
 def test_model_inference_engine_lifecycle(model_info):
     """Tests loading, dimension binding, and decision execution for each model."""
+    model_name = model_info["name"]
+    from tests.conftest import _has_model_weights
+    if not _has_model_weights(model_name):
+        pytest.skip(f"Model '{model_name}' backbone weights not downloaded. Run ./scripts/setup_model.sh to download.")
     cfg = OpenJEVConfig(
         mode="real",
         model=ModelConfig(
