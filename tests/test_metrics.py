@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from eval_harness.metrics import (
+from calibration.metrics import (
     compute_ece,
     compute_brier_decomposition,
     compute_aurc,

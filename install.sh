@@ -16,8 +16,10 @@ while [[ $# -gt 0 ]]; do
       exit 0
       ;;
     --rust|-r)
-      "$SCRIPT_DIR/scripts/install_rust.sh"
-      exit 0
+      # "$SCRIPT_DIR/scripts/install_rust.sh"
+      echo "⚠️  El runtime nativo de Rust está en desarrollo en la rama 'research' y no está disponible en esta versión pública."
+      echo "Por favor utiliza el runtime oficial de Python: ./install.sh --python"
+      exit 1
       ;;
     --python|-p)
       "$SCRIPT_DIR/scripts/install_python.sh"
@@ -32,7 +34,6 @@ while [[ $# -gt 0 ]]; do
       echo ""
       echo "Opciones:"
       echo "  --python, -p       Instalar directamente el runtime de Python (.venv / Docker)"
-      echo "  --rust, -r         Instalar directamente el runtime nativo de Rust (openjev-mlx)"
       echo "  --model, -m        Ejecutar solo el asistente de configuración de modelo"
       echo "  --check, -c        Ejecutar diagnóstico de entorno y compatibilidad (Doctor)"
       echo "  --help, -h         Mostrar esta ayuda"
@@ -51,15 +52,9 @@ echo ""
 echo "============================================================"
 echo "           Selección de Runtime de OpenJEV"
 echo "============================================================"
-echo "¿Qué motor deseas instalar en este equipo?"
-echo "  [1] Python (Recomendado: Apple MLX / Metal GPU, o Docker en Linux/Windows)"
-echo "  [2] Rust Nativo (Binario compilado independiente openjev-mlx, Apple Silicon)"
+echo "Instalando runtime oficial de OpenJEV en Python (Apple MLX / Metal GPU)..."
+echo "(Nota: El backend en Rust está en desarrollo en la rama 'research')"
 echo ""
-read -r -p "Selecciona una opción [1/2] (por defecto: 1): " RUNTIME_CHOICE
-RUNTIME_CHOICE="${RUNTIME_CHOICE:-1}"
 
-if [ "$RUNTIME_CHOICE" = "2" ]; then
-  "$SCRIPT_DIR/scripts/install_rust.sh"
-else
-  "$SCRIPT_DIR/scripts/install_python.sh"
-fi
+# Ejecución del instalador de Python
+"$SCRIPT_DIR/scripts/install_python.sh"

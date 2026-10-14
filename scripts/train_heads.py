@@ -49,7 +49,9 @@ class HeadTrainer:
         # Load Backbone & Tokenizer
         import mlx_lm
         self.model, self.tokenizer = mlx_lm.load(model_dir)
-        self.backbone = self.model.model
+        self.backbone = getattr(self.model, "model", getattr(self.model, "transformer", None))
+        if self.backbone is None:
+            raise AttributeError(f"Could not extract transformer backbone from {type(self.model)}")
         backbone_name = self.backbone.__class__.__name__
         print(f"[OpenJEV Trainer] Loaded {backbone_name} transformer backbone on Metal GPU (Frozen)")
 

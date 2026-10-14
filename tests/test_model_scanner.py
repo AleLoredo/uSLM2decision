@@ -22,6 +22,15 @@ def test_get_model_hidden_size_from_config():
         dim = get_model_hidden_size(tmpdir)
         assert dim == 1024
 
+def test_get_model_hidden_size_from_model_dim_openelm():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        cfg_path = os.path.join(tmpdir, "config.json")
+        with open(cfg_path, "w") as f:
+            json.dump({"model_dim": 1536, "model_type": "openelm"}, f)
+        
+        dim = get_model_hidden_size(tmpdir)
+        assert dim == 1536
+
 def test_init_and_verify_canonical_heads():
     with tempfile.TemporaryDirectory() as tmpdir:
         heads_path = init_canonical_heads(tmpdir, hidden_dim=896)

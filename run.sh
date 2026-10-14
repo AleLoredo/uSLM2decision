@@ -34,28 +34,35 @@ done
 echo "=== Arrancando OpenJEV ==="
 
 # Auto-detección del runtime instalado si no se especificó un flag
+# (Comentado temporalmente mientras se completa la reimplementación de Rust)
+# if [ -z "$RUNTIME" ]; then
+#   if [ -f "./target/release/openjev-mlx" ] && [ ! -d ".venv" ]; then
+#     RUNTIME="rust"
+#   elif [ -d ".venv" ] && [ ! -f "./target/release/openjev-mlx" ]; then
+#     RUNTIME="python"
+#   elif [ -f "./target/release/openjev-mlx" ] && [ -d ".venv" ]; then
+#     RUNTIME="${OPENJEV_RUNTIME:-python}"
+#   fi
+# fi
 if [ -z "$RUNTIME" ]; then
-  if [ -f "./target/release/openjev-mlx" ] && [ ! -d ".venv" ]; then
-    RUNTIME="rust"
-  elif [ -d ".venv" ] && [ ! -f "./target/release/openjev-mlx" ]; then
-    RUNTIME="python"
-  elif [ -f "./target/release/openjev-mlx" ] && [ -d ".venv" ]; then
-    # Ambos presentes: prioridad por variable de entorno o Python por defecto
-    RUNTIME="${OPENJEV_RUNTIME:-python}"
-  fi
+  RUNTIME="python"
 fi
 
 # 1. Rama de Ejecución en Rust
+# (Comentada temporalmente - próximamente disponible)
+# if [ "$RUNTIME" = "rust" ]; then
+#   if [ ! -f "./target/release/openjev-mlx" ]; then
+#     echo "❌ Error: El binario './target/release/openjev-mlx' no existe."
+#     exit 1
+#   fi
+#   echo "-> Runtime seleccionado: Rust Nativo (openjev-mlx)"
+#   echo "-> Servidor escuchando en http://${HOST}:${PORT}"
+#   exec ./target/release/openjev-mlx
+# fi
 if [ "$RUNTIME" = "rust" ]; then
-  if [ ! -f "./target/release/openjev-mlx" ]; then
-    echo "❌ Error: El binario './target/release/openjev-mlx' no existe."
-    echo "Ejecuta primero: cargo build --release (o ./install.sh seleccionando Rust)."
-    exit 1
-  fi
-  echo "⚠️  Aviso: La implementación nativa de Rust está pausada hasta nuevo aviso. El desarrollo activo es en Python."
-  echo "-> Runtime seleccionado: Rust Nativo (openjev-mlx)"
-  echo "-> Servidor escuchando en http://${HOST}:${PORT}"
-  exec ./target/release/openjev-mlx
+  echo "⚠️  El runtime nativo de Rust estará disponible próximamente."
+  echo "Por el momento se ejecutará el runtime oficial en Python..."
+  RUNTIME="python"
 fi
 
 # 2. Modo Docker (Linux / Windows con imagen construida)

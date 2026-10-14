@@ -9,7 +9,7 @@ from typing import Dict, Tuple, Optional
 import numpy as np
 import mlx.core as mx
 import mlx.nn as nn
-from eval_harness.metrics import compute_ece
+from calibration.metrics import compute_ece
 
 class TemperatureScaler:
     """

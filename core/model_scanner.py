@@ -30,13 +30,13 @@ def get_expected_shapes(hidden_dim: int) -> Dict[str, Tuple[int, ...]]:
     }
 
 def get_model_hidden_size(model_dir: str, default: int = 896) -> int:
-    """Reads hidden_size or d_model from config.json in model_dir."""
+    """Reads hidden_size, d_model, or model_dim from config.json in model_dir."""
     config_path = os.path.join(model_dir, "config.json")
     if os.path.exists(config_path):
         try:
             with open(config_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            hidden_size = data.get("hidden_size") or data.get("d_model")
+            hidden_size = data.get("hidden_size") or data.get("d_model") or data.get("model_dim")
             if hidden_size and isinstance(hidden_size, int):
                 return hidden_size
         except Exception as e:

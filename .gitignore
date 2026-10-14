@@ -1,7 +1,31 @@
+# Virtual environment & build targets
 target/
 .venv/
 .pytest_cache/
 __pycache__/
 *.pyc
+
+# OS & Editor Metadata
 .DS_Store
-scratch/mlx_spike/target/
+.vscode/
+.idea/
+
+# Large weights and model directories (downloaded on demand via scripts/setup_model.sh)
+models/*
+!models/.gitkeep
+*.safetensors
+*.bin
+*.model
+
+# Private research, internal specs, and exploratory scratchpads
+research/
+scratch/
+benches/
+data/
+AGENTS.md
+ARCHITECTURE.md
+CALIBRATION_ABLATION.md
+DATASET_CARD.md
+IMPLEMENTATION.md
+ROADMAP.md
+SPEC.md

@@ -22,11 +22,16 @@ echo "------------------------------------------------------------"
 read -r -p "Selecciona una opción [1/2] (por defecto: 1): " MODE_CHOICE
 MODE_CHOICE="${MODE_CHOICE:-1}"
 
+PYTHON_BIN="python3"
+if [ -d ".venv/bin" ]; then
+  PYTHON_BIN=".venv/bin/python3"
+fi
+
 if [ "$MODE_CHOICE" = "2" ]; then
   echo ""
   echo "-> Modo 'real' seleccionado."
-  echo "¿Cómo deseas obtener el modelo de referencia Qwen2.5-0.5B?"
-  echo "  [D] Descargar automáticamente desde Hugging Face (~380 MB en Mac / ~980 MB en Linux, Recomendado)"
+  echo "¿Cómo deseas configurar los modelos de referencia?"
+  echo "  [D] Descargar automáticamente desde Hugging Face (Recomendado)"
   echo "  [L] Especificar ruta a un modelo local ya existente en tu disco"
   echo "  [M] Cambiar a modo Mock (cancelar descarga de pesos)"
   echo ""
@@ -34,7 +39,7 @@ if [ "$MODE_CHOICE" = "2" ]; then
   REAL_OPT="${REAL_OPT:-d}"
 
   if [[ "$REAL_OPT" =~ ^[mM]$ ]]; then
-    python3 -m core.config --set-mode mock
+    $PYTHON_BIN -m core.config --set-mode mock
     echo "-> Conmutado a modo 'mock'."
   elif [[ "$REAL_OPT" =~ ^[lL]$ ]]; then
     read -r -p "Indica el nombre o subcarpeta del modelo dentro de ./models/ [qwen2.5-0.5b]: " LOCAL_MODEL_NAME
@@ -56,28 +61,35 @@ if [ "$MODE_CHOICE" = "2" ]; then
       echo "  [M]      Cambiar a modo Mock y continuar"
       read -r -p "Selecciona una opción o presiona Enter para reintentar: " RETRY_RESP
       if [[ "$RETRY_RESP" =~ ^[mM]$ ]]; then
-        python3 -m core.config --set-mode mock
+        $PYTHON_BIN -m core.config --set-mode mock
         echo "-> Conmutado a modo 'mock'."
         break
       fi
     done
 
     if [ -f "$TARGET_DIR/heads.safetensors" ]; then
-      python3 -m core.config --set-mode real --set-model "$LOCAL_MODEL_NAME" --set-backbone "$TARGET_DIR" --set-heads "$TARGET_DIR/heads.safetensors"
+      $PYTHON_BIN -m core.config --set-mode real --set-model "$LOCAL_MODEL_NAME" --set-backbone "$TARGET_DIR" --set-heads "$TARGET_DIR/heads.safetensors"
       echo "✅ Modelo local verificado y configurado en config.yaml"
     fi
   else
     # Opción [D]: Descarga asistida de Hugging Face
     echo ""
     echo "¿Qué modelo deseas descargar?"
-    echo "  [1] Qwen2.5-0.5B-4bit (Fast tier, ~380 MB, Recomendado para baja latencia)"
+    echo "  [1] Qwen2.5-0.5B-4bit (Fast tier, ~380 MB en Mac / ~980 MB en Linux, Baja latencia)"
     echo "  [2] Gemma-2-2b-it-4bit (Balanced tier, ~1.4 GB, Mayor capacidad semántica)"
-    read -r -p "Selecciona una opción [1/2] (por defecto: 1): " MODEL_SUBCHOICE
+    echo "  [3] OpenELM-450M-Instruct (Efficient Edge tier, ~872 MB, Arquitectura Apple asimétrica)"
+    read -r -p "Selecciona una opción [1/2/3] (por defecto: 1): " MODEL_SUBCHOICE
     MODEL_SUBCHOICE="${MODEL_SUBCHOICE:-1}"
 
     if [ "$MODEL_SUBCHOICE" = "2" ]; then
       repo_id="mlx-community/gemma-2-2b-it-4bit"
       model_name="gemma-2-2b"
+    elif [ "$MODEL_SUBCHOICE" = "3" ]; then
+      repo_id="mlx-community/OpenELM-450M-Instruct"
+      if [ "$OS_TYPE" != "Darwin" ]; then
+        repo_id="apple/OpenELM-450M-Instruct"
+      fi
+      model_name="openelm-450m"
     else
       repo_id="mlx-community/Qwen2.5-0.5B-4bit"
       if [ "$OS_TYPE" != "Darwin" ]; then
@@ -90,16 +102,16 @@ if [ "$MODE_CHOICE" = "2" ]; then
     mkdir -p "$target_dir"
     echo ""
     echo "-> Descargando '$repo_id' desde Hugging Face hacia $target_dir..."
-    python3 -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='$repo_id', local_dir='$target_dir')"
+    $PYTHON_BIN -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='$repo_id', local_dir='$target_dir')"
 
     echo "-> Inicializando cabezales canónicos heads.safetensors en $target_dir..."
-    python3 -m core.model_scanner --model-dir "$target_dir" --init-heads
+    $PYTHON_BIN -m core.model_scanner --model-dir "$target_dir" --init-heads
 
-    python3 -m core.config --set-mode real --set-model "$model_name" --set-backbone "$target_dir" --set-heads "$target_dir/heads.safetensors"
+    $PYTHON_BIN -m core.config --set-mode real --set-model "$model_name" --set-backbone "$target_dir" --set-heads "$target_dir/heads.safetensors"
     echo "✅ Modelo $model_name descargado y configurado exitosamente."
   fi
 else
-  python3 -m core.config --set-mode mock
+  $PYTHON_BIN -m core.config --set-mode mock
   echo "✅ Modo 'mock' configurado en config.yaml."
 fi
 

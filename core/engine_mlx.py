@@ -77,13 +77,15 @@ class MLXInferenceEngine(BaseInferenceEngine):
         try:
             import mlx_lm
             self.model, self.tokenizer = mlx_lm.load(backbone_dir)
-            self.backbone = self.model.model
+            self.backbone = getattr(self.model, "model", getattr(self.model, "transformer", None))
+            if self.backbone is None:
+                raise AttributeError(f"Could not extract transformer backbone from {type(self.model)}")
             print(f"[OpenJEV MLX Engine] Real backbone loaded: {len(self.backbone.layers)} transformer layers on Metal GPU")
         except Exception as e:
             print(f"[OpenJEV MLX Engine] Note: mlx_lm backbone load fallback ({e})")
             try:
                 from transformers import AutoTokenizer
-                self.tokenizer = AutoTokenizer.from_pretrained(backbone_dir, trust_remote_code=True)
+                self.tokenizer = AutoTokenizer.from_pretrained(backbone_dir, trust_remote_code=False)
             except Exception:
                 self.tokenizer = None
 

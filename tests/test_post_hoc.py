@@ -10,7 +10,7 @@ import numpy as np
 import mlx.core as mx
 from calibration.post_hoc import TemperatureScaler
 from calibration.recalibrate import recalibrate_domain_model
-from eval_harness.metrics import compute_ece
+from calibration.metrics import compute_ece
 
 def test_temperature_scaler_reduces_ece():
     np.random.seed(42)
