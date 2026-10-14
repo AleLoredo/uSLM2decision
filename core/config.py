@@ -31,7 +31,7 @@ class ModelConfig(BaseModel):
 
 class AuthConfig(BaseModel):
     enabled: bool = False
-    api_keys: List[str] = Field(default_factory=lambda: ["env:OPENJEV_API_KEY", "jev-local-dev-key"])
+    api_keys: List[str] = Field(default_factory=lambda: ["env:OPENJEV_API_KEY", "openjev-local-dev-key"])
 
     def get_resolved_keys(self) -> List[str]:
         """Resolves API keys, parsing env:VAR_NAME from environment variables."""

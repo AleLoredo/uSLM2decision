@@ -19,29 +19,30 @@ server:
   host: 0.0.0.0
   port: 8000
   
-  # Seguridad y Control de Acceso (IMPLEMENTATION.md §8)
+  # Seguridad y Control de Acceso (Autenticación Bearer token)
   auth:
     enabled: false
     api_keys:
       - env:OPENJEV_API_KEY
-      - jev-local-dev-key
+      - openjev-local-dev-key
 
-  # Limitación de Tasa Standalone para despliegues sin API Gateway (IMPLEMENTATION.md §8.1)
+  # Limitación de Tasa Standalone para despliegues en el borde sin API Gateway (Algoritmo Token Bucket)
   rate_limit:
     enabled: false
     max_burst: 50
     requests_per_second: 20
 
-  # Control de Admisión de Hardware y Load Shedding (IMPLEMENTATION.md §8.1)
+  # Control de Admisión de Hardware y Descarte de Carga (Protección de memoria y GPU)
   admission:
     max_queue_depth: 2048
     max_active_tokens: 16384
     retry_after_seconds: 2
 
-  # Dynamic Micro-Batching y Despachador Metal GPU (IMPLEMENTATION.md §4)
+  # Dynamic Micro-Batching y Despachador Concurrente para Inferencia
   batching:
     enabled: true
     max_batch_size: 16
     max_wait_ms: 8
     max_queue_depth: 2048
+
 
