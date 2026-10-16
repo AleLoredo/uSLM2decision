@@ -129,6 +129,21 @@ OpenJEV bundles a bilingual (English / Spanish) multi-task dataset partitioned i
 
 > **Note:** The live serving engine ([`server/edge_server.py`](server/edge_server.py)) evaluates requests in zero/few-token passes using the compiled weights (`heads.safetensors`) and calibration parameters (`calibration.json`), without querying `.jsonl` files at runtime.
 
+### Esquema para dataset de entrenamiento
+
+Cada línea en los archivos `.jsonl` (`train.jsonl`, `val.jsonl`, `test.jsonl`) representa un registro de entrenamiento supervisado que modela la llamada a la API (`POST /v1/decide`) junto con la etiqueta esperada (*ground truth*):
+
+| Campo | Tipo | Justificación en la API y Entrenamiento |
+| :--- | :--- | :--- |
+| **`id`** | `string` | Identificador único de muestra (ej. `"rec_00001"` o `"telco_001"`). Permite trazabilidad, reproducibilidad de métricas de pérdida/ECE y depuración en auditorías de datos. |
+| **`primitive`** | `string` (`"choice"`, `"score"`, `"noul"`) | Indica al cargador de entrenamiento ([`scripts/train_heads.py`](scripts/train_heads.py)) cuál de los tres cabezales supervisados (`ChoiceHead`, `ScoreHead` o `BoolHead`) debe recibir y optimizar este registro con su respectiva función de pérdida. |
+| **`state`** | `string` \| `object` | Representa el contexto o mensaje de entrada a evaluar. Es el texto que se procesa a través del backbone para extraer el vector de contexto $h_{\text{state}}$. Modela situaciones o estados que el modelo evaluará en una sola pasada hacia adelante. |
+| **`question`** | `object` | Modela la pregunta declarada tal como se estructura en `POST /v1/decide` ([`SPEC.md` §3 y §4](SPEC.md)): |
+| **`question.type`** | `string` | Tipo de la pregunta; debe coincidir con `primitive` para garantizar la validación de esquema en la API. |
+| **`question.instructions`** | `string` | Instrucción que guía la decisión. Permite al modelo diferenciar consultas idénticas con criterios distintos (requisito de sensibilidad a criterios de [`ARCHITECTURE.md` §3.2](ARCHITECTURE.md)). |
+| **`question.criteria`** | `dict` (para `choice`), `list` (para `score`), `string` (para `noul`, opcional) | **En `choice`:** Un diccionario `{ "<id>": "<descripción>" }` donde cada clave representa una opción y su valor es la definición semántica que se proyecta en el espacio bilineal.<br>**En `score`:** Una lista ordenada de strings `["nivel 0", "nivel 1", ...]` que define la escala ordinal.<br>**En `noul`:** Opcional (clarificación del enunciado verdadero/falso). |
+| **`target`** | `string` / `int` | Etiqueta de verdad terreno (*ground truth*) para el entrenamiento supervisado:<br>• Para `choice`: clave exacta de la opción ganadora definida en `criteria` (ej. `"facturacion"`).<br>• Para `score`: índice entero en la rúbrica (ej. `0`, `1`, `2`).<br>• Para `noul`: entero binario `0` (falso) o `1` (verdadero). |
+
 ---
 
 ## 📡 Sample API Usage
