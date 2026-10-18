@@ -29,19 +29,25 @@
       },
       "score": {
         "acc": 78.0,
-        "severe_misses_pct": 3.0,
+        "mae_cont": 0.432,
+        "rmse_cont": 0.566,
+        "severe_misses_pct": 2.0,
+        "tolerance_05_pct": 37.0,
+        "tolerance_10_pct": 7.0,
         "off_by_1_pct": 19.0,
-        "mae": 0.25
+        "mae_disc": 0.25,
+        "mae": 0.432
       },
       "summary": {
         "macro_acc": 83.33,
         "macro_ece_equal_width": 15.25,
         "macro_ece_adaptive": 13.98,
         "macro_brier": 0.2245,
-        "score_severe_misses_pct": 3.0
+        "score_mae_cont": 0.432,
+        "score_severe_misses_pct": 2.0
       }
     },
-    "time_seconds": 45.12,
+    "time_seconds": 43.92,
     "output_dir": "./experiments/run/TDS2_qwen2.5-0.5b/E1"
   },
   {
@@ -74,19 +80,25 @@
       },
       "score": {
         "acc": 78.0,
-        "severe_misses_pct": 3.0,
+        "mae_cont": 0.432,
+        "rmse_cont": 0.566,
+        "severe_misses_pct": 2.0,
+        "tolerance_05_pct": 37.0,
+        "tolerance_10_pct": 7.0,
         "off_by_1_pct": 19.0,
-        "mae": 0.25
+        "mae_disc": 0.25,
+        "mae": 0.432
       },
       "summary": {
         "macro_acc": 83.33,
         "macro_ece_equal_width": 15.0,
         "macro_ece_adaptive": 13.4,
         "macro_brier": 0.2206,
-        "score_severe_misses_pct": 3.0
+        "score_mae_cont": 0.432,
+        "score_severe_misses_pct": 2.0
       }
     },
-    "time_seconds": 2.74,
+    "time_seconds": 2.71,
     "output_dir": "./experiments/run/TDS2_qwen2.5-0.5b/E2"
   },
   {
@@ -119,19 +131,25 @@
       },
       "score": {
         "acc": 69.0,
-        "severe_misses_pct": 8.0,
+        "mae_cont": 0.437,
+        "rmse_cont": 0.581,
+        "severe_misses_pct": 2.0,
+        "tolerance_05_pct": 37.0,
+        "tolerance_10_pct": 8.0,
         "off_by_1_pct": 23.0,
-        "mae": 0.39
+        "mae_disc": 0.39,
+        "mae": 0.437
       },
       "summary": {
         "macro_acc": 78.33,
         "macro_ece_equal_width": 13.27,
         "macro_ece_adaptive": 13.93,
         "macro_brier": 0.2417,
-        "score_severe_misses_pct": 8.0
+        "score_mae_cont": 0.437,
+        "score_severe_misses_pct": 2.0
       }
     },
-    "time_seconds": 0.39,
+    "time_seconds": 0.41,
     "output_dir": "./experiments/run/TDS2_qwen2.5-0.5b/E3"
   },
   {
@@ -164,19 +182,25 @@
       },
       "score": {
         "acc": 72.0,
-        "severe_misses_pct": 8.0,
+        "mae_cont": 0.411,
+        "rmse_cont": 0.543,
+        "severe_misses_pct": 1.0,
+        "tolerance_05_pct": 34.0,
+        "tolerance_10_pct": 10.0,
         "off_by_1_pct": 20.0,
-        "mae": 0.36
+        "mae_disc": 0.36,
+        "mae": 0.411
       },
       "summary": {
         "macro_acc": 84.33,
         "macro_ece_equal_width": 11.28,
         "macro_ece_adaptive": 10.1,
         "macro_brier": 0.1635,
-        "score_severe_misses_pct": 8.0
+        "score_mae_cont": 0.411,
+        "score_severe_misses_pct": 1.0
       }
     },
-    "time_seconds": 0.54,
+    "time_seconds": 0.53,
     "output_dir": "./experiments/run/TDS2_qwen2.5-0.5b/E4a"
   },
   {
@@ -209,19 +233,25 @@
       },
       "score": {
         "acc": 74.0,
-        "severe_misses_pct": 7.0,
+        "mae_cont": 0.389,
+        "rmse_cont": 0.516,
+        "severe_misses_pct": 0.0,
+        "tolerance_05_pct": 31.0,
+        "tolerance_10_pct": 7.0,
         "off_by_1_pct": 19.0,
-        "mae": 0.33
+        "mae_disc": 0.33,
+        "mae": 0.389
       },
       "summary": {
         "macro_acc": 88.67,
         "macro_ece_equal_width": 7.04,
         "macro_ece_adaptive": 6.07,
         "macro_brier": 0.0789,
-        "score_severe_misses_pct": 7.0
+        "score_mae_cont": 0.389,
+        "score_severe_misses_pct": 0.0
       }
     },
-    "time_seconds": 0.55,
+    "time_seconds": 0.7,
     "output_dir": "./experiments/run/TDS2_qwen2.5-0.5b/E4b"
   },
   {
@@ -254,19 +284,25 @@
       },
       "score": {
         "acc": 72.0,
-        "severe_misses_pct": 8.0,
+        "mae_cont": 0.411,
+        "rmse_cont": 0.543,
+        "severe_misses_pct": 1.0,
+        "tolerance_05_pct": 34.0,
+        "tolerance_10_pct": 10.0,
         "off_by_1_pct": 20.0,
-        "mae": 0.36
+        "mae_disc": 0.36,
+        "mae": 0.411
       },
       "summary": {
         "macro_acc": 84.33,
         "macro_ece_equal_width": 10.33,
         "macro_ece_adaptive": 9.27,
         "macro_brier": 0.1614,
-        "score_severe_misses_pct": 8.0
+        "score_mae_cont": 0.411,
+        "score_severe_misses_pct": 1.0
       }
     },
-    "time_seconds": 0.64,
+    "time_seconds": 0.55,
     "output_dir": "./experiments/run/TDS2_qwen2.5-0.5b/E5a"
   },
   {
@@ -299,19 +335,25 @@
       },
       "score": {
         "acc": 74.0,
-        "severe_misses_pct": 7.0,
+        "mae_cont": 0.389,
+        "rmse_cont": 0.516,
+        "severe_misses_pct": 0.0,
+        "tolerance_05_pct": 31.0,
+        "tolerance_10_pct": 7.0,
         "off_by_1_pct": 19.0,
-        "mae": 0.33
+        "mae_disc": 0.33,
+        "mae": 0.389
       },
       "summary": {
         "macro_acc": 88.67,
         "macro_ece_equal_width": 5.27,
         "macro_ece_adaptive": 5.47,
         "macro_brier": 0.078,
-        "score_severe_misses_pct": 7.0
+        "score_mae_cont": 0.389,
+        "score_severe_misses_pct": 0.0
       }
     },
-    "time_seconds": 0.61,
+    "time_seconds": 0.56,
     "output_dir": "./experiments/run/TDS2_qwen2.5-0.5b/E5b"
   },
   {
@@ -344,19 +386,25 @@
       },
       "score": {
         "acc": 69.0,
-        "severe_misses_pct": 8.0,
+        "mae_cont": 0.437,
+        "rmse_cont": 0.581,
+        "severe_misses_pct": 2.0,
+        "tolerance_05_pct": 37.0,
+        "tolerance_10_pct": 8.0,
         "off_by_1_pct": 23.0,
-        "mae": 0.39
+        "mae_disc": 0.39,
+        "mae": 0.437
       },
       "summary": {
         "macro_acc": 78.33,
         "macro_ece_equal_width": 12.79,
         "macro_ece_adaptive": 13.41,
         "macro_brier": 0.2399,
-        "score_severe_misses_pct": 8.0
+        "score_mae_cont": 0.437,
+        "score_severe_misses_pct": 2.0
       }
     },
-    "time_seconds": 0.41,
+    "time_seconds": 0.4,
     "output_dir": "./experiments/run/TDS2_qwen2.5-0.5b/E6"
   }
 ]

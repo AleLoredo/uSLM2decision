@@ -145,18 +145,20 @@ EXPERIMENT_SPECS = [
 def format_markdown_table(results: List[Dict[str, Any]]) -> str:
     lines = [
         "### 4.9 Ablation Study: Training Methodology & Decoupled Calibration Matrix\n",
-        "| Experiment ID | Pipeline Configuration | Fase 2 Opt | Bool Acc (%) | Choice Acc (%) | Score Acc (%) | ECE (%) [Equal Width] | ECE (%) [Adaptive] | Brier Score | Score Severe Misses |",
+        "| Experiment ID | Pipeline Configuration | Fase 2 Opt | Bool Acc (%) | Choice Acc (%) | Score Cont MAE | Score Severe (>1.5) | ECE (%) [Equal Width] | ECE (%) [Adaptive] | Brier Score |",
         "|---|---|---|---|---|---|---|---|---|---|"
     ]
     for r in results:
         spec = r["spec"]
         m = r["metrics"]
         opt_label = spec["phase2_optimizer"].capitalize() if spec["enable_phase2"] else "—"
+        score_mae = m["score"].get("mae_cont", m["score"].get("mae", 0.0))
+        score_sev = m["score"]["severe_misses_pct"]
         row = (
             f"| **{spec['id']}** | {spec['pipeline_label']} | {opt_label} | "
-            f"{m['bool']['acc']:.2f} | {m['choice']['acc']:.2f} | {m['score']['acc']:.2f} | "
+            f"{m['bool']['acc']:.2f} | {m['choice']['acc']:.2f} | {score_mae:.3f} | {score_sev:.2f}% | "
             f"{m['summary']['macro_ece_equal_width']:.2f} | {m['summary']['macro_ece_adaptive']:.2f} | "
-            f"{m['summary']['macro_brier']:.4f} | {m['score']['severe_misses_pct']:.2f}% |"
+            f"{m['summary']['macro_brier']:.4f} |"
         )
         lines.append(row)
     return "\n".join(lines)

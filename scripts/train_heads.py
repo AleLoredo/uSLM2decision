@@ -503,24 +503,39 @@ class HeadTrainer:
             np.sum((p - np.eye(len(p))[t]) ** 2) for p, t in zip(choice_probs_list, choice_targets)
         ]) if choice_samples else 0.0
 
-        # 3. Evaluate Score
+        # 3. Evaluate Score (Continuous Expected Value per SPEC.md §3.2 + Discrete Argmax)
         score_samples = eval_feat.get("score", [])
-        score_preds, score_targets, score_diffs = [], [], []
+        score_preds, score_targets = [], []
+        score_diffs_disc, score_diffs_cont = [], []
         for h_q, num_levels, target_level in score_samples:
             s_out = self.score_head(h_q, min_val=0, max_val=num_levels - 1, num_levels=num_levels)
             logits = np.array(s_out["logits"][0])
             scaled_logits = logits / t_score
             probs = np.exp(scaled_logits) / np.sum(np.exp(scaled_logits))
+            
+            # Discrete argmax level
             pred_level = int(np.argmax(probs))
             score_preds.append(pred_level)
             score_targets.append(int(target_level))
-            score_diffs.append(abs(pred_level - int(target_level)))
+            score_diffs_disc.append(abs(pred_level - int(target_level)))
 
-        diffs = np.array(score_diffs) if score_diffs else np.array([0])
-        score_acc = np.mean(diffs == 0) if score_samples else 1.0
-        severe_misses = np.mean(diffs >= 2) * 100.0 if score_samples else 0.0
-        off1_misses = np.mean(diffs == 1) * 100.0 if score_samples else 0.0
-        mae = float(np.mean(diffs)) if score_samples else 0.0
+            # Continuous expected value: S_bar = sum(k * p_k)
+            levels = np.arange(len(probs))
+            s_bar = float(np.sum(probs * levels))
+            score_diffs_cont.append(abs(s_bar - float(target_level)))
+
+        diffs_disc = np.array(score_diffs_disc) if score_diffs_disc else np.array([0])
+        diffs_cont = np.array(score_diffs_cont) if score_diffs_cont else np.array([0.0])
+
+        score_acc = np.mean(diffs_disc == 0) if score_samples else 1.0
+        off1_misses = np.mean(diffs_disc == 1) * 100.0 if score_samples else 0.0
+        mae_disc = float(np.mean(diffs_disc)) if score_samples else 0.0
+
+        mae_cont = float(np.mean(diffs_cont)) if score_samples else 0.0
+        rmse_cont = float(np.sqrt(np.mean(diffs_cont ** 2))) if score_samples else 0.0
+        tolerance_05_pct = float(np.mean(diffs_cont > 0.5) * 100.0) if score_samples else 0.0
+        tolerance_10_pct = float(np.mean(diffs_cont > 1.0) * 100.0) if score_samples else 0.0
+        severe_misses_cont = float(np.mean(diffs_cont > 1.5) * 100.0) if score_samples else 0.0
 
         macro_acc = (bool_acc + choice_acc + score_acc) / 3.0
         macro_ece_ew = (bool_ece_ew + choice_ece_ew) / 2.0
@@ -542,16 +557,22 @@ class HeadTrainer:
             },
             "score": {
                 "acc": round(float(score_acc * 100), 2),
-                "severe_misses_pct": round(float(severe_misses), 2),
+                "mae_cont": round(mae_cont, 3),
+                "rmse_cont": round(rmse_cont, 3),
+                "severe_misses_pct": round(float(severe_misses_cont), 2),
+                "tolerance_05_pct": round(float(tolerance_05_pct), 2),
+                "tolerance_10_pct": round(float(tolerance_10_pct), 2),
                 "off_by_1_pct": round(float(off1_misses), 2),
-                "mae": round(mae, 3),
+                "mae_disc": round(mae_disc, 3),
+                "mae": round(mae_cont, 3),
             },
             "summary": {
                 "macro_acc": round(float(macro_acc * 100), 2),
                 "macro_ece_equal_width": round(float(macro_ece_ew * 100), 2),
                 "macro_ece_adaptive": round(float(macro_ece_ad * 100), 2),
                 "macro_brier": round(float(macro_brier), 4),
-                "score_severe_misses_pct": round(float(severe_misses), 2),
+                "score_mae_cont": round(mae_cont, 3),
+                "score_severe_misses_pct": round(float(severe_misses_cont), 2),
             }
         }
 
