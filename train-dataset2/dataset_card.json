@@ -1,0 +1,41 @@
+{
+  "dataset_name": "openjev-telco-spanish-v2",
+  "version": "2.0.0",
+  "language": "es",
+  "output_directory": "train-dataset2",
+  "total_samples": 1800,
+  "split": {
+    "train": 1200,
+    "val": 300,
+    "test": 300
+  },
+  "primitives": {
+    "noul": 600,
+    "choice": 600,
+    "score": 600
+  },
+  "split_breakdown": {
+    "train": {
+      "noul": 400,
+      "choice": 400,
+      "score": 400
+    },
+    "val": {
+      "noul": 100,
+      "choice": 100,
+      "score": 100
+    },
+    "test": {
+      "noul": 100,
+      "choice": 100,
+      "score": 100
+    }
+  },
+  "contamination_audit": {
+    "train_val_overlap": 0,
+    "train_test_overlap": 0,
+    "val_test_overlap": 0,
+    "status": "clean_disjoint_partitions"
+  },
+  "license": "Apache-2.0"
+}
