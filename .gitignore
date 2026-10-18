@@ -18,7 +18,7 @@ models/*
 *.model
 
 # Private research, internal specs, and exploratory scratchpads
-research/
+# research/
 scratch/
 benches/
 data/

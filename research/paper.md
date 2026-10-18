@@ -110,6 +110,59 @@ The continuous expected score $\bar{S}$ and predictive variance $\sigma_S^2$ are
 $$\bar{S} = \sum_{i=0}^{M-1} i \cdot p_i \in [0, M-1], \quad \sigma_S^2 = \sum_{i=0}^{M-1} (i - \bar{S})^2 p_i$$
 $$\text{discrete\_level} = \text{round}(\bar{S}) \in \{0, \dots, M-1\}$$
 
+### 2.4 The Dual-Tier Calibration & Head-Only Tuning Paradigm
+
+A pivotal architectural decision in OpenJEV is the deliberate avoidance of **Full Fine-Tuning** of the foundation transformer backbone. Rather than updating the multi-billion parameter attention and feedforward layers across all $L$ depth stages, OpenJEV implements a strict **Head-Only Tuning (Linear Probing)** protocol, followed by a **two-tier calibration pipeline**.
+
+#### 2.4.1 Why Head-Only Tuning over Full Fine-Tuning?
+
+| Dimension | Full Backbone Fine-Tuning | Head-Only Tuning (OpenJEV) |
+|---|---|---|
+| **Parameter Footprint** | Updates 100% of weights ($0.45\text{B} \to 2.0\text{B}$ params) | Updates $<0.1\%$ of weights ($\sim 3.2\text{ MB}$ `heads.safetensors`) |
+| **Linguistic Manifold Integrity** | High risk of **catastrophic forgetting** and representation collapse | Preserves 100% of pretrained linguistic geometry and reasoning |
+| **Hardware & Compute Cost** | Requires multi-GPU clusters, hours of backward passes | Runs in $<30\text{ seconds}$ on Apple Silicon Metal GPU unified memory |
+| **Model Serving Agility** | Requires storing and loading separate full model checkpoints | Multiple task head profiles can bind to a single shared frozen backbone |
+| **Calibration Stability** | Tends to severely overfit logits to training data distributions | Linear projections maintain smooth, well-conditioned probability bounds |
+
+By freezing the transformer layers, the backbone acts as a high-capacity, fixed **contextual representation extractor** producing pooled query vectors $h_{Q_k} \in \mathbb{R}^d$. The linear decision projections ($W_{\text{bool}}, W_{\text{choice}}, W_{\text{score}}$) merely orient these representations onto discrete task boundaries.
+
+#### 2.4.2 The Two-Tier Calibration Pipeline
+
+In modern deep neural networks, classification accuracy does not imply well-calibrated confidence; models trained with standard cross-entropy systematically output extreme, overconfident probabilities ($>95\%$) even when empirically error-prone. To guarantee mathematically honest confidence metrics, OpenJEV incorporates calibration at two distinct stages:
+
+```
+[Context State + Question Schema]
+                │
+                ▼
+   [Frozen Transformer Backbone]
+   (Qwen 2.5 / Gemma 2 / OpenELM)
+                │
+                ▼
+       Pooled Hidden Vector h_Q ∈ ℝ^d
+                │
+  ┌─────────────┴────────────────────────────────┐
+  │                                              │
+  ▼                                              ▼
+[Tier 1: Intrinsic Calibration]       [Tier 2: Extrinsic Calibration]
+In-Training Loss Shaping              Post-Hoc Temperature Scaling
+• Combined Focal + Brier Score        • Platt Scaling on Held-Out val.jsonl
+• Mathematically penalizes            • Fits Scalar Temperature T in <50ms
+  overconfident wrong predictions      • Preserves Argmax Accuracy (No Retraining)
+• Strictly Proper Scoring Rule        • Exported to calibration.json
+```
+
+1. **Tier 1: Intrinsic In-Training Calibration (Loss Shaping):**
+   During backpropagation over head weights, standard cross-entropy is rejected because it encourages logits to diverge toward $\pm \infty$. Instead, OpenJEV employs a combined loss formulation coupling Focal Loss with Brier Score Regularization:
+   $$\mathcal{L} = \mathcal{L}_{\text{Focal}}(\gamma = 1.0) + \lambda \cdot \mathcal{L}_{\text{Brier}}(\lambda = 0.5)$$
+   The **Brier Score** ($\frac{1}{C}\sum (p_c - y_c)^2$) is a *strictly proper scoring rule* that reaches its global minimum if and only if the predicted probabilities match true conditional posterior probabilities, penalizing overconfidence directly during gradient updates.
+
+2. **Tier 2: Extrinsic Post-Hoc Recalibration (Temperature Scaling):**
+   Once the linear heads are trained and frozen, a secondary post-hoc calibration step evaluates the model on the held-out validation split (`val.jsonl`). A strictly positive temperature parameter $T \in \mathbb{R}^+$ is optimized via negative log-likelihood minimization:
+   $$\hat{p}_i = \text{Softmax}\left(\frac{z_i}{T}\right) \quad \text{or} \quad \sigma\left(\frac{z}{T}\right)$$
+   Because temperature scaling is a strictly monotonic transformation, it **strictly preserves the predicted class ordering (argmax)**, maintaining identical classification accuracy while aligning the confidence distribution with empirical error rates.
+   
+   **Domain Recalibration Advantage:** When deploying OpenJEV to a novel enterprise domain with distinct lexical characteristics (Out-of-Distribution / OOD), the system does **not** require retraining the backbone or heads. Practitioners can execute post-hoc temperature optimization on as few as 100–200 domain-specific calibration samples in **under 50 milliseconds**, reducing out-of-distribution Expected Calibration Error (ECE) from $18.26\%$ down to $3.34\%$.
+
 ---
 
 ## 3. Methodological Pathologies and Failure Modes
@@ -123,7 +176,7 @@ During early iterations of the system, multiple critical failure modes emerged a
   produced:
   $$\text{is\_urgent} = 0 \quad (\text{with } P(\text{true}) = 0.189)$$
 * **Root Cause:** A generative LLM's final-token representation $h_Q$ contains rich semantic encodings, but the linear subspace separating "urgent" from "non-urgent" is not inherently aligned with arbitrary random projections. A random projection $W_{\text{bool}} h_Q$ produces arbitrary scalar logits centered around zero, rendering zero-shot inference purely stochastic.
-* **Correction:** Implemented supervised fine-tuning of the linear head parameters while keeping the underlying Qwen 2.5 backbone frozen. The loss function couples binary cross-entropy with a Brier calibration penalty:
+* **Correction:** Implemented Head-Only Tuning (Linear Probing) over the decision head parameters while keeping the foundation transformer backbone strictly frozen. To prevent overconfidence and enforce honest probabilistic bounds during optimization, the objective function couples binary cross-entropy with a Brier calibration penalty:
   $$\mathcal{L}_{\text{bool}} = \text{BCE}(p, y) + \lambda_{\text{calib}} (p - y)^2$$
   where $\lambda_{\text{calib}} = 0.5$.
 
@@ -607,6 +660,7 @@ The findings from this investigation yield practical guidelines for researchers 
 7. **Dimension-Aware Temperature Calibration Across Model Families:** When transitioning between compact backbones ($d \le 1024$) and higher-dimensional architectures ($d \ge 1536$), bilinear choice temperature $\tau$ must be scaled inversely with $\sqrt{d}$ to accommodate cosine concentration effects in higher latent dimensions.
 8. **Sanitize Prompt Junction Delimiters and Preserve Direct Imperatives:** Subword tokenizers greedily fuse trailing whitespace with prompt separators. State strings must be stripped (`.strip()`) before sequence packing. Rubrics must include direct, non-prefaced transactional statements to prevent linear probes from conflating blunt phrasing with hostility.
 9. **Implement Polymorphic Transformer Dispatch for Non-Uniform Architectures:** Backbones with non-uniform layer structures (e.g., OpenELM) frequently use different internal module naming conventions (`.transformer` vs `.model`) and config keys (`model_dim` vs `hidden_size`). Inference runtimes must utilize polymorphic attribute access ladders and sanitize remote configuration code.
+10. **Prefer Head-Only Tuning Coupled with Dual-Tier Calibration Over Full Fine-Tuning:** Full fine-tuning of multi-billion parameter backbones introduces severe catastrophic forgetting, distorts pretrained linguistic geometries, and creates unsustainable storage and deployment overheads. Conversely, freezing the transformer backbone and performing supervised linear probing over lightweight task decision heads ($\sim 3.2\text{ MB}$), accompanied by intrinsic loss shaping (Focal + Brier score) and extrinsic post-hoc temperature scaling, yields state-of-the-art calibration ($\text{ECE} \le 3.67\%$) and sub-minute training on Apple Silicon Metal GPU while enabling sub-50ms out-of-distribution domain recalibration without model weight mutation.
 
 ---
 

@@ -87,13 +87,40 @@ server:
   port: 8000
 ```
 
-Switching the active model can also be done quickly via CLI:
+#### How to Switch to Another Model (e.g., OpenELM or Gemma 2)
 
+To load a different model when running `./run.sh`, you can use either of two options:
+
+##### Option A: Quick Switching via CLI
 ```bash
+# Switch active model to OpenELM-450M:
 python3 -m core.config --set-mode real \
   --set-model openelm-450m \
   --set-backbone ./models/openelm-450m \
   --set-heads ./models/openelm-450m/heads.safetensors
+
+# Switch active model to Gemma 2 2B:
+python3 -m core.config --set-mode real \
+  --set-model gemma-2-2b \
+  --set-backbone ./models/gemma-2-2b \
+  --set-heads ./models/gemma-2-2b/heads.safetensors
+
+# Switch active model back to Qwen 2.5 0.5B:
+python3 -m core.config --set-mode real \
+  --set-model qwen2.5-0.5b \
+  --set-backbone ./models/qwen2.5-0.5b \
+  --set-heads ./models/qwen2.5-0.5b/heads.safetensors
+```
+
+##### Option B: Editing `config.yaml`
+Modify the `model` block in [`config.yaml`](config.yaml):
+```yaml
+model:
+  base_dir: ./models
+  active_model: openelm-450m                # "openelm-450m", "gemma-2-2b", or "qwen2.5-0.5b"
+  backbone_path: ./models/openelm-450m
+  heads_path: ./models/openelm-450m/heads.safetensors
+  calibration_path: ./models/openelm-450m/calibration.json
 ```
 
 ### 3. Running the Server
