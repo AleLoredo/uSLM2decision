@@ -165,20 +165,38 @@ def run_matrix(
     model_dir: str = "./models/qwen2.5-0.5b",
     dataset_dir: str = None,
     output_base: str = "./experiments",
+    runs_subfolder: str = None,
     seed: int = 42,
     fast_mode: bool = False,
     selected_experiments: List[str] = None
 ):
     start_total = time.perf_counter()
-    os.makedirs(output_base, exist_ok=True)
-    runs_dir = os.path.join(output_base, "runs")
+    model_name = os.path.basename(os.path.normpath(model_dir))
+
+    # Resolve default dataset
+    if dataset_dir is None:
+        if os.path.isdir("./train-dataset2"):
+            dataset_dir = "./train-dataset2"
+        elif os.path.isdir("./train-dataset1"):
+            dataset_dir = "./train-dataset1"
+        else:
+            dataset_dir = "./train-dataset"
+
+    # Resolve subfolder name (default: TDS2_<model_name>)
+    if runs_subfolder is None:
+        runs_subfolder = f"TDS2_{model_name}"
+
+    runs_dir = os.path.join(output_base, "run", runs_subfolder)
     os.makedirs(runs_dir, exist_ok=True)
 
     print("================================================================================")
     print("        OpenJEV Scientific Ablation Suite: Decoupled Training Matrix           ")
-    print(f"  Model:   {model_dir}")
-    print(f"  Seed:    {seed}")
-    print(f"  Fast:    {fast_mode}")
+    print(f"  Model:       {model_dir}")
+    print(f"  Dataset:     {dataset_dir}")
+    print(f"  Subfolder:   {runs_subfolder}")
+    print(f"  Runs Dir:    {runs_dir}")
+    print(f"  Seed:        {seed}")
+    print(f"  Fast:        {fast_mode}")
     print("================================================================================\n")
 
     # 1. Load backbone and tokenizer once
@@ -255,20 +273,31 @@ def run_matrix(
 
     # 4. Generate Markdown table and summary JSON
     markdown_table = format_markdown_table(results)
-    summary_path = os.path.join(output_base, "ablation_summary.json")
-    table_path = os.path.join(output_base, "ablation_table.md")
+    
+    # Save both in root experiments/ and inside runs_dir
+    summary_paths = [
+        os.path.join(output_base, "ablation_summary.json"),
+        os.path.join(runs_dir, "ablation_summary.json")
+    ]
+    table_paths = [
+        os.path.join(output_base, "ablation_table.md"),
+        os.path.join(runs_dir, "ablation_table.md")
+    ]
 
-    with open(summary_path, "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=2)
+    for p in summary_paths:
+        with open(p, "w", encoding="utf-8") as f:
+            json.dump(results, f, indent=2)
 
-    with open(table_path, "w", encoding="utf-8") as f:
-        f.write(markdown_table + "\n")
+    for p in table_paths:
+        with open(p, "w", encoding="utf-8") as f:
+            f.write(markdown_table + "\n")
 
     total_time = time.perf_counter() - start_total
     print("\n================================================================================")
     print(f"  ✅ Ablation Matrix Execution Complete ({len(results)} experiments in {total_time:.2f}s)")
-    print(f"  Summary JSON: {summary_path}")
-    print(f"  Table MD:     {table_path}")
+    print(f"  Runs Directory: {runs_dir}")
+    print(f"  Summary JSON:   {summary_paths[0]}")
+    print(f"  Table MD:       {table_paths[0]}")
     print("================================================================================\n")
     print(markdown_table)
     print("\n")
@@ -277,8 +306,9 @@ def run_matrix(
 def main():
     parser = argparse.ArgumentParser(description="OpenJEV Automated Scientific Ablation Matrix Runner")
     parser.add_argument("--model-dir", default="./models/qwen2.5-0.5b", help="Path to backbone model")
-    parser.add_argument("--dataset-dir", default=None, help="Dataset directory")
+    parser.add_argument("--dataset-dir", default="./train-dataset2", help="Dataset directory (defaults to ./train-dataset2)")
     parser.add_argument("--output-base", default="./experiments", help="Base directory for experiment runs")
+    parser.add_argument("--runs-subfolder", default=None, help="Subfolder name inside runs/ (defaults to TDS2_<model>)")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for all experiments")
     parser.add_argument("--fast", action="store_true", help="Fast mode for smoke tests (reduced epochs)")
     parser.add_argument("--experiments", nargs="+", default=None, help="Specific experiment IDs to run (e.g. E1 E4a E4b)")
@@ -288,6 +318,7 @@ def main():
         model_dir=args.model_dir,
         dataset_dir=args.dataset_dir,
         output_base=args.output_base,
+        runs_subfolder=args.runs_subfolder,
         seed=args.seed,
         fast_mode=args.fast,
         selected_experiments=args.experiments
@@ -295,3 +326,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
