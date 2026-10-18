@@ -204,7 +204,8 @@ def run_matrix(
     # 1. Load backbone and tokenizer once
     print(f"[Ablation Suite] Loading transformer backbone from '{model_dir}'...")
     t_load = time.perf_counter()
-    model, tokenizer = mlx_lm.load(model_dir)
+    loaded_model = mlx_lm.load(model_dir)
+    model, tokenizer = loaded_model[0], loaded_model[1]
     print(f"[Ablation Suite] Backbone loaded in {time.perf_counter() - t_load:.2f}s.")
 
     # 2. Extract features once and cache in memory

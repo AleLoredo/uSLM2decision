@@ -96,7 +96,8 @@ class MLXInferenceEngine(BaseInferenceEngine):
         if require_backbone:
             try:
                 import mlx_lm
-                self.model, self.tokenizer = mlx_lm.load(backbone_dir)
+                loaded = mlx_lm.load(backbone_dir)
+                self.model, self.tokenizer = loaded[0], loaded[1]
                 self.backbone = getattr(self.model, "model", getattr(self.model, "transformer", None))
                 if self.backbone is None:
                     raise AttributeError(f"Could not extract transformer backbone from {type(self.model)}")
