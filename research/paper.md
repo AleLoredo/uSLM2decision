@@ -676,15 +676,79 @@ Concurrent evaluation of all three decision primitives (`noul` + `choice` + `sco
 
 ### 4.9 Ablation Study: Training Methodology & Decoupled Calibration Matrix
 
-To establish the empirical individual contribution of each component within the decision head training lifecycle, we executed a controlled scientific ablation matrix across eight decoupled configurations on `Qwen2.5-0.5B` ($d=896$) using a frozen backbone with in-memory latent representation caching and a fixed random seed ($\text{seed} = 42$):
+To establish the empirical individual contribution of each component within the decision head training lifecycle, we executed a controlled scientific ablation matrix across eight decoupled configurations on `Qwen2.5-0.5B` ($d=896$) using a frozen backbone with in-memory latent representation caching and a fixed random seed ($\text{seed} = 42$).
 
-1. **Phase 1 (`--phase1-loss [ce | focal_brier]`):** Initial linear probing comparing pure unregularized Cross-Entropy (BCE for `bool`, Softmax CE for `choice`, and one-hot categorical CE for `score`) against intrinsic loss shaping (Focal + Brier score for `bool` and `choice`, and Gaussian-smoothed ordinal loss with $\sigma=0.35$ for `score`).
-2. **Phase 2 (`--enable-phase2`, Warm-Start Curriculum Refinement):** Takes Phase 1 weights and trains 30 additional epochs under calibrated loss shaping. To evaluate the optimizer momentum shock without imposing arbitrary heuristics, Phase 2 is launched in two formal modalities:
-   - **Modalidad A (`reset`):** Re-initializes AdamW state buffers ($m_t=0, v_t=0$) with an attenuated learning rate ($\eta = 2 \times 10^{-4}$).
-   - **Modalidad B (`continuous`):** Preserves the accumulated momentum and velocity buffers of AdamW, updating only the learning rate.
-3. **Phase 3 (`--skip-phase3` vs post-hoc):** Extrinsic post-hoc temperature scaling fitted via grid search over validation split logits.
+#### 4.9.1 Decoupled Training Phase Architecture and Curriculum Design
 
-#### Empirical Ablation Results on Blind Test Split (`test.jsonl`, $N=300$, 100 per primitive):
+The OpenJEV training methodology decomposes decision head synthesis into three decoupled, mathematically distinct phases:
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                        THREE-PHASE DECOUPLED DECISION TRAINING                         │
+│                                                                                        │
+│  [Phase 1: Representation Alignment]                                                   │
+│   • Coarse linear probing on frozen transformer backbone embeddings                    │
+│   • Evaluated under: Classical Cross-Entropy (CE) vs Intrinsic Loss Shaping (FB)      │
+│   • Epochs: 60 | Learning Rate: η₁ = 1e-3 | AdamW (β₁=0.9, β₂=0.999)                  │
+│                                     │                                                  │
+│                                     ▼                                                  │
+│  [Phase 2: Intrinsic Margin Refinement (Warm-Start Curriculum)]                        │
+│   • Warm-start from Phase 1 weights; refines margins via proper scoring rules          │
+│   • Loss: Focal + Brier regularization (bool/choice) & Gaussian ordinal loss (score)   │
+│   • Epochs: 30 | Attenuated Learning Rate: η₂ = 2e-4                                   │
+│   • Optimizer State Management Modalities:                                             │
+│       - Modalidad A (reset): Re-initializes m_t = 0, v_t = 0 (prevents momentum shock)│
+│       - Modalidad B (continuous): Preserves accumulated first/second moment buffers    │
+│                                     │                                                  │
+│                                     ▼                                                  │
+│  [Phase 3: Extrinsic Post-Hoc Recalibration]                                           │
+│   • Temperature scaling (T > 0) fitted on independent validation partition (val.jsonl) │
+│   • Strictly monotonic transformation: preserves top-1 argmax and MAE                  │
+│   • Target: Fits T_bool via ECE/NLL grid search; choice and score default to T = 1.0   │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+1. **Phase 1: Representation Alignment (Coarse Linear Probing):**
+   - **Objective:** Orient randomly initialized decision projection layers ($W_{\text{bool}}, W_{\text{choice}}, W_{\text{score}}$) with the rich contextual subspace formed by the frozen transformer backbone.
+   - **Modalities Evaluated:**
+     - **Classical Cross-Entropy (`ce`):** Optimizes standard unregularized cross-entropy (BCE for `bool`, Categorical Softmax CE for `choice`, and one-hot categorical CE for `score`). This maximizes linear class separation and top-1 accuracy quickly, but systematically pushes logits toward extreme values ($|z| \gg 0$), producing severely uncalibrated, overconfident probability outputs ($T=1.0$).
+     - **Intrinsic Loss Shaping (`focal_brier`):** Optimizes combined Focal Loss + Brier score regularization from scratch. While theoretically well-calibrated, cold-start optimization with non-convex calibration penalties can cause the optimizer to settle into suboptimal local minima before coarse semantic separation is established.
+   - **Optimization Hyperparameters:** 60 epochs, initial learning rate $\eta_1 = 1 \times 10^{-3}$, batch sizes $\{B_{\text{bool}}=32, B_{\text{choice}}=8, B_{\text{score}}=16\}$.
+
+2. **Phase 2: Intrinsic Margin Refinement (Warm-Start Curriculum):**
+   - **Objective:** Refine the decision boundaries obtained from Phase 1 by reshaping probability margins through strictly proper scoring rules.
+   - **Loss Formulation:** Always applies intrinsic calibrated losses:
+     - `bool`: $\mathcal{L}_{\text{bool}} = \text{BCE}(p, y) + \lambda_{\text{brier}} (p - y)^2$ ($\lambda_{\text{brier}} = 0.5$).
+     - `choice`: $\mathcal{L}_{\text{choice}} = \text{CE}(p, y) + \lambda_{\text{brier}} \sum_{c=1}^N (p_c - y_c)^2$ ($\lambda_{\text{brier}} = 0.5$).
+     - `score`: Gaussian-smoothed soft-target cross-entropy ($\sigma = 0.35$).
+   - **Optimization Hyperparameters:** 30 epochs with an attenuated learning rate $\eta_2 = 2 \times 10^{-4}$ ($5\times$ lower than Phase 1).
+   - **The Momentum Shock Dilemma (Optimizer State Management):**
+     When transitioning between Phase 1 and Phase 2, the loss function changes abruptly. AdamW maintains exponentially smoothed running estimates of the gradient first moment ($m_t = \beta_1 m_{t-1} + (1-\beta_1) g_t$) and second moment ($v_t = \beta_2 v_{t-1} + (1-\beta_2) g_t^2$). To determine whether momentum retention benefits or harms margin recalibration, Phase 2 is launched in two formal modalities:
+     - **Modalidad A (`reset`):** Cold re-initialization of AdamW buffers ($m_t = 0, v_t = 0$). This eliminates historical directional drag toward uncalibrated regions, allowing the attenuated gradients of the calibration loss to reshape boundaries cleanly.
+     - **Modalidad B (`continuous`):** Strictly preserves accumulated momentum and velocity buffers ($m_t, v_t$), testing whether optimization continuity accelerates convergence across objective transitions.
+
+3. **Phase 3: Extrinsic Post-Hoc Recalibration (Temperature Scaling):**
+   - **Objective:** Apply a single global scalar temperature parameter $T > 0$ to scale unnormalized logits ($z / T$) prior to softmax/sigmoid activation.
+   - **Fitting Protocol:** Optimized strictly on the isolated validation partition (`val.jsonl`, $N=300$) using grid search and Brent's scalar minimization to minimize Expected Calibration Error (ECE) and NLL.
+   - **Monotonicity Guarantee:** Because scalar temperature scaling is strictly monotonic, it preserves the relative ordering of candidate logits ($\arg\max_i z_i / T \equiv \arg\max_i z_i$). It cannot alter top-1 classification accuracy or expected value rankings, serving strictly as a global confidence dispersion tuner.
+   - **Primitives:** Fits $T_{\text{bool}} \in (0.5, 0.7)$ for Boolean verification. For `choice` and `score`, where multi-candidate ranking and ordinal expectation are already shaped in Phase 2, temperature defaults to unit scaling ($T=1.0$).
+
+#### 4.9.2 Taxonomy of Experimental Configurations ($E_1$ to $E_6$)
+
+The eight experimental configurations decouple every pairwise combination of the three phases to isolate causal effects:
+
+| Experiment ID | Configuration Label | Phase 1 Loss | Phase 2 Refinement | Phase 2 Optimizer State | Phase 3 Post-Hoc | Scientific Hypothesis Tested |
+|---|---|:---:|:---:|:---:|:---:|---|
+| **E1** | Phase 1 (Classical CE) | `ce` | Disabled | — | Disabled ($T=1.0$) | **Vanilla Baseline:** Measures raw model accuracy and uncalibrated overconfidence under standard deep learning practice. |
+| **E2** | Phase 1 (CE) + Phase 3 (Post-Hoc T) | `ce` | Disabled | — | Enabled ($T_{\text{val}}$) | **Classical Post-Hoc Paradigm:** Evaluates whether scalar temperature scaling alone (Guo et al., 2017) can resolve overconfidence without in-training loss shaping. |
+| **E3** | Phase 1 (Focal + Brier) | `focal_brier` | Disabled | — | Disabled ($T=1.0$) | **Direct Intrinsic Probing:** Measures whether optimizing calibrated loss functions from scratch (cold-start) suffices without a two-stage curriculum. |
+| **E4a** | Phase 1 (CE) + Phase 2 (Refinement) | `ce` | Enabled (30 Ep.) | `continuous` | Disabled ($T=1.0$) | **Warm-Start with Momentum Retention:** Tests the effect of preserving AdamW momentum buffers across the transition from CE to calibrated loss shaping. |
+| **E4b** | Phase 1 (CE) + Phase 2 (Refinement) | `ce` | Enabled (30 Ep.) | `reset` | Disabled ($T=1.0$) | **Warm-Start with Optimizer Reset:** Tests whether clearing momentum buffers eliminates directional inertia and enables superior margin refinement. |
+| **E5a** | Full Curriculum (P1 + P2 + P3) | `ce` | Enabled (30 Ep.) | `continuous` | Enabled ($T_{\text{val}}$) | **Full 3-Phase Suite (Continuous):** Evaluates the complete three-tier pipeline under strict optimizer continuity. |
+| **E5b** | Full Curriculum (P1 + P2 + P3) | `ce` | Enabled (30 Ep.) | `reset` | Enabled ($T_{\text{val}}$) | **Full 3-Phase Suite (Reset):** The complete OpenJEV recommended training curriculum, combining coarse representation learning, optimizer-cleared margin refinement, and post-hoc temperature calibration. |
+| **E6** | Direct Pipeline (P1[FB] + P3) | `focal_brier` | Disabled | — | Enabled ($T_{\text{val}}$) | **Direct Production Baseline:** Evaluates single-stage intrinsic loss shaping coupled with post-hoc calibration (omitting the coarse CE pre-training phase). |
+
+#### 4.9.3 Empirical Ablation Results on Blind Test Split (`test.jsonl`, $N=300$, 100 per primitive):
 
 | Experiment ID | Pipeline Configuration | Fase 2 Opt | Bool Acc (%) | Choice Acc (%) | Score Cont MAE | Score Severe (>1.5) | ECE (%) [Equal Width] | ECE (%) [Adaptive] | Brier Score |
 |---|---|---|---|---|---|---|---|---|---|
