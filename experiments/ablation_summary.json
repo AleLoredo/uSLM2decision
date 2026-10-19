@@ -47,7 +47,7 @@
         "score_severe_misses_pct": 2.0
       }
     },
-    "time_seconds": 43.92,
+    "time_seconds": 43.83,
     "output_dir": "./experiments/run/TDS2_qwen2.5-0.5b/E1"
   },
   {
@@ -98,7 +98,7 @@
         "score_severe_misses_pct": 2.0
       }
     },
-    "time_seconds": 2.71,
+    "time_seconds": 2.7,
     "output_dir": "./experiments/run/TDS2_qwen2.5-0.5b/E2"
   },
   {
@@ -149,7 +149,7 @@
         "score_severe_misses_pct": 2.0
       }
     },
-    "time_seconds": 0.41,
+    "time_seconds": 0.38,
     "output_dir": "./experiments/run/TDS2_qwen2.5-0.5b/E3"
   },
   {
@@ -200,7 +200,7 @@
         "score_severe_misses_pct": 1.0
       }
     },
-    "time_seconds": 0.53,
+    "time_seconds": 0.79,
     "output_dir": "./experiments/run/TDS2_qwen2.5-0.5b/E4a"
   },
   {
@@ -251,7 +251,7 @@
         "score_severe_misses_pct": 0.0
       }
     },
-    "time_seconds": 0.7,
+    "time_seconds": 0.64,
     "output_dir": "./experiments/run/TDS2_qwen2.5-0.5b/E4b"
   },
   {
@@ -302,7 +302,7 @@
         "score_severe_misses_pct": 1.0
       }
     },
-    "time_seconds": 0.55,
+    "time_seconds": 0.59,
     "output_dir": "./experiments/run/TDS2_qwen2.5-0.5b/E5a"
   },
   {
@@ -353,7 +353,7 @@
         "score_severe_misses_pct": 0.0
       }
     },
-    "time_seconds": 0.56,
+    "time_seconds": 0.6,
     "output_dir": "./experiments/run/TDS2_qwen2.5-0.5b/E5b"
   },
   {
@@ -404,7 +404,7 @@
         "score_severe_misses_pct": 2.0
       }
     },
-    "time_seconds": 0.4,
+    "time_seconds": 0.5,
     "output_dir": "./experiments/run/TDS2_qwen2.5-0.5b/E6"
   }
 ]
