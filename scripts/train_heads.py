@@ -37,7 +37,7 @@ from calibration.loss_shaping import combined_focal_brier_loss
 from calibration.post_hoc import TemperatureScaler
 from calibration.metrics import compute_ece, compute_brier_decomposition
 from core.model_scanner import get_model_hidden_size
-from core.batching.packer import extract_question_text
+from core.batching.packer import extract_question_text, serialize_state_to_text
 
 def load_jsonl(path: str) -> List[Dict[str, Any]]:
     records = []
@@ -142,14 +142,16 @@ class HeadTrainer:
                 raise AttributeError(f"Could not extract transformer backbone from {type(self.model)}")
             print(f"[OpenJEV Trainer] Backbone {self.backbone.__class__.__name__} ready.")
 
-    def _extract_embedding(self, state: str, q_text: str = "") -> mx.array:
+    def _extract_embedding(self, state: Any, q_text: str = "") -> mx.array:
         self._ensure_backbone_loaded()
-        if q_text:
-            s_tokens = self.tokenizer.encode(state, add_special_tokens=False)
-            q_tokens = self.tokenizer.encode(f"\n\nQuestion: {q_text}", add_special_tokens=False)
+        state_text = serialize_state_to_text(state)
+        q_text_clean = q_text.strip() if q_text else ""
+        if q_text_clean:
+            s_tokens = self.tokenizer.encode(state_text, add_special_tokens=False)
+            q_tokens = self.tokenizer.encode(f"\n\nQuestion: {q_text_clean}", add_special_tokens=False)
             tokens = (s_tokens + q_tokens) or [1]
         else:
-            tokens = self.tokenizer.encode(state, add_special_tokens=False) or [1]
+            tokens = self.tokenizer.encode(state_text, add_special_tokens=False) or [1]
         hidden = self.backbone(mx.array([tokens]))
         return hidden[:, -1, :].astype(mx.float32)
 

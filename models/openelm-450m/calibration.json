@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "model": "openelm-450m",
+  "status": "calibrated",
+  "temperatures": {
+    "bool": 0.5,
+    "choice": 1.0,
+    "score": 1.0
+  },
+  "timestamp": "2026-10-12T08:24:52Z"
+}

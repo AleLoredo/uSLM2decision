@@ -1,0 +1,37 @@
+{
+  "format_version": "1.0",
+  "openjev_version": "2.0.0",
+  "hidden_dim": 2304,
+  "status": "trained_and_calibrated",
+  "tensors": {
+    "bool_head.linear.weight": [
+      1,
+      2304
+    ],
+    "bool_head.linear.bias": [
+      1
+    ],
+    "choice_head.w_choice.weight": [
+      2304,
+      2304
+    ],
+    "score_head.w_score.weight": [
+      5,
+      2304
+    ],
+    "score_head.w_score.bias": [
+      5
+    ]
+  },
+  "calibration": {
+    "version": "1.0",
+    "model": "gemma-2-2b",
+    "status": "calibrated",
+    "temperatures": {
+      "bool": 0.5,
+      "choice": 1.0,
+      "score": 1.0
+    },
+    "timestamp": "2026-10-12T03:17:23Z"
+  }
+}
