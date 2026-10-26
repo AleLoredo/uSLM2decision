@@ -852,28 +852,62 @@ To test the boundaries of System 1 decision projection under extreme structural 
 
 | Experiment ID | Pipeline Configuration | Fase 2 Opt | Bool Acc (%) | Choice Acc (%) | Score Cont MAE | Score Severe (>1.5) | ECE (%) [Equal Width] | ECE (%) [Adaptive] | Brier Score |
 |---|---|---|---|---|---|---|---|---|---|
-| **E1** | Phase 1 (Classical CE) | — | 61.00 | 26.00 | 0.654 | 1.00% | 6.92 | 13.76 | 0.6204 |
-| **E2** | Phase 1 (CE) + Phase 3 (Post-Hoc T) | — | 61.00 | 26.00 | 0.654 | 1.00% | 6.27 | 14.22 | 0.6227 |
-| **E3** | Phase 1 (Focal + Brier) | — | 54.00 | 28.00 | 0.654 | 1.00% | 13.85 | 16.42 | 0.6289 |
-| **E4a** | Phase 1 (CE) + Phase 2 (Refinement) | Continuous | 64.00 | 26.00 | 0.640 | 1.00% | 7.11 | 16.21 | 0.6211 |
-| **E4b** | Phase 1 (CE) + Phase 2 (Refinement) | Reset | 64.00 | 24.00 | 0.629 | 1.00% | 9.62 | 16.44 | 0.6126 |
-| **E5a** | Full Curriculum (P1 + P2 + P3) | Continuous | 64.00 | 26.00 | 0.640 | 1.00% | 8.61 | 16.10 | 0.6290 |
-| **E5b** | Full Curriculum (P1 + P2 + P3) | Reset | **64.00** | **24.00** | **0.629** | **1.00%** | **10.25** | **17.56** | **0.6228** |
-| **E6** | Direct Pipeline (P1[FB] + P3) | — | 54.00 | 28.00 | 0.654 | 1.00% | 6.82 | 17.50 | 0.6306 |
+| **E1** | Phase 1 (Classical CE) | — | 99.00 | 97.00 | 0.260 | 0.00% | 8.01 | 8.01 | 0.0617 |
+| **E2** | Phase 1 (CE) + Phase 3 (Post-Hoc T) | — | 99.00 | 97.00 | 0.260 | 0.00% | 5.97 | 5.97 | 0.0544 |
+| **E3** | Phase 1 (Focal + Brier) | — | 100.00 | 96.00 | 0.265 | 0.00% | 9.11 | 9.11 | 0.0718 |
+| **E4a** | Phase 1 (CE) + Phase 2 (Refinement) | Continuous | 99.00 | 97.00 | 0.254 | 0.00% | 6.98 | 7.44 | 0.0542 |
+| **E4b** | Phase 1 (CE) + Phase 2 (Refinement) | Reset | 100.00 | 98.00 | 0.216 | 0.00% | 4.20 | 3.94 | 0.0306 |
+| **E5a** | Full Curriculum (P1 + P2 + P3) | Continuous | 99.00 | 97.00 | 0.254 | 0.00% | 4.72 | 5.18 | 0.0449 |
+| **E5b** | Full Curriculum (P1 + P2 + P3) | Reset | **100.00** | **98.00** | **0.216** | **0.00%** | **1.97** | **1.70** | **0.0233** |
+| **E6** | Direct Pipeline (P1[FB] + P3) | — | 100.00 | 96.00 | 0.265 | 0.00% | 5.35 | 5.35 | 0.0521 |
 
-#### 4.11.2 Architectural Constraints and Representational Bottlenecks in OpenELM-450M:
+#### 4.11.2 Initial Pipeline Execution, Anomaly Detection, and the Attention Sink / BOS Anchor Pathology
 
-1. **Early-Layer Parameter Starvation and Linear Probe Ceilings:**
-   OpenELM distributes parameters unevenly across its 20 layers: Layer 0 contains only 12 query heads, 3 KV heads, and an FFN multiplier of $0.5\times$ (compared to 24 heads and $4.0\times$ in Layer 19). While this design maximizes throughput on Apple Silicon hardware, it imposes an upstream representational bottleneck for linear probing:
-   - In multi-candidate categorical routing (`choice`), accuracy hovered between $24.00\%$ and $28.00\%$, indicating that frozen linear projections cannot cleanly separate fine-grained intent boundaries when early representations lack sufficient relational capacity.
-   - Boolean verification reached $64.00\%$ under curriculum training (**E4/E5**), a notable improvement over single-stage cold-start (**E3/E6** at $54.00\%$), but remained well below uniform backbones ($92\% - 96\%$).
-   - This diagnostic demonstrates that while on-device non-uniform backbones excel at sequential token generation, linear probing without backbone LoRA/adapter adaptation encounters structural capacity limits under extreme early-layer compression.
+> [!IMPORTANT]
+> **Methodological Incident & Root Cause Investigation:**
+> When the standard decision head training pipeline was initially applied to OpenELM-450M using the exact configuration used for Qwen2.5 and Gemma-2 (`self.tokenizer.encode(..., add_special_tokens=False)`), the resulting evaluation metrics were severely depressed across all eight ablation configurations (Table 4.11.1).
+> 
+> Specifically, Boolean exact match stalled at $61.00\% - 64.00\%$ (barely above the $50\%$ random guessing threshold), multi-candidate categorical routing (`choice`) collapsed completely to random chance ($24.00\% - 28.00\%$ for 4-way classification, where uniform guessing is $25.00\%$), and continuous Score MAE stagnated between $0.629$ and $0.654$ with an elevated Brier score ($0.6126 - 0.6228$).
+> 
+> Because these figures were drastically inferior to uniform architectures ($96.00\%$ Choice in both Qwen and Gemma), we halted the pipeline to execute an exhaustive diagnostic audit. This investigation uncovered a critical, previously undocumented failure mode at the intersection of tokenization, attention dynamics, and non-uniform layer scaling: the **Attention Sink / BOS Token Anchor Pathology** (Xiao et al., 2023).
 
-2. **Persistence of Ordinal Semantic Monotonicity:**
-   In contrast to categorical routing, the continuous ordinal Score primitive demonstrated remarkable resilience:
-   - Continuous MAE was tightly bounded at **$0.629$** in $E_{5b}$ (improving from $0.654$ in uncalibrated $E_1$).
-   - Catastrophic severe errors ($|\bar{S} - y^*| > 1.5$) were held to strictly **$1.00\%$** (only 1 out of 100 test queries), meaning $99.00\%$ of all predictions fell within adjacent rubric tolerance bounds.
-   - This empirical finding proves that Gaussian-smoothed soft targets enforce continuous semantic proximity even when absolute categorical classification power is constrained by backbone geometry.
+##### 1. Root Cause Diagnosis: The Attention Sink Collapse
+1. **Lineage Tokenization Asymmetry:**
+   - In `Qwen 2.5-0.5B`, Alibaba configured the tokenizer with `"add_bos_token": false`. The model was pretrained to operate without an explicit beginning-of-sequence token in prompt mode, meaning `add_special_tokens=False` respected its native pretraining distribution.
+   - In `Gemma 2 2B`, Google uses `<bos>` (token ID 2), but Gemma possesses 2.0B parameters, $\sqrt{d}$ embedding scaling, and interleaved sliding-window attention. This high representational redundancy absorbed the missing token without noticeable degradation.
+   - In `OpenELM-450M`, Apple built the model on the LLaMA tokenizer specification (`LlamaTokenizer`, vocab size: 32,000), where **every single training sample strictly began with `<s>` (BOS token ID 1, `"add_bos_token": true`)**.
+2. **The Attention Sink Phenomenon (Xiao et al., 2023):**
+   In autoregressive decoder transformers, softmax normalization forces attention heads to deposit an immense amount of initial attention mass on token position 0—regardless of its semantic content—acting as a numerical "attention sink". When `add_special_tokens=False` was passed, the initial `<s>` token was omitted. Consequently, the first arbitrary token of the customer query (e.g., `'¿'`, `'Hola'`, or greeting fragments) was forced to act as the attention sink.
+3. **Compound Saturation in Layer-Varying Architectures:**
+   Unlike standard uniform transformers where Layer 0 has identical width to deep layers, OpenELM adopts an asymmetric parameter ladder: Layer 0 has only **12 query heads, 3 KV heads, and an FFN multiplier of $0.5\times$** (an extremely narrow capacity). Without the canonical `<s>` anchor to absorb the unnormalized attention mass, this narrow early bottleneck saturated completely.
+4. **Latent Manifold Degeneracy (Hyper-Anisotropic Collapse):**
+   To quantify the resulting damage, we measured pairwise cosine similarities across independent queries in the frozen latent representations:
+   - Without BOS (`add_special_tokens=False`), the mean pairwise cosine similarity between completely unrelated queries surged to **$0.9830$** (std: $0.012$, min: $0.9047$, max: $0.9993$).
+   - The entire representation space collapsed into a narrow, hyper-anisotropic cone of angle $< 10^\circ$. Candidate option embeddings for `choice` ($e_{C_i}$) had pairwise similarities $> 0.985$ with one another, producing vanishingly small loss gradients ($\sim 0.0017$) that trapped the linear bilinear projection $W_c$ in random guessing ($24.00\%$).
+
+##### 2. Corrective Intervention: Canonical BOS Sequence Anchoring
+To eliminate this pathology without breaking compatibility with Qwen, we modified the sequence packing and tokenization layer across both training ([scripts/train_heads.py](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/scripts/train_heads.py)) and runtime serving ([core/engine_mlx.py](file:///Users/alejandro/Documents/WORK/DATOOLS/OpenJEV/core/engine_mlx.py)):
+$$\text{tokens} = \begin{cases} [ \text{bos\_id} ] \oplus \text{tokens}, & \text{if } \text{bos\_id} \ne \bot \land \text{tokens}[0] \ne \text{bos\_id} \\ \text{tokens}, & \text{otherwise} \end{cases}$$
+Furthermore, we sanitized `models/openelm-450m/config.json` by excising legacy `"auto_map"` entries that triggered Hugging Face dataclass initialization prompts.
+
+##### 3. Controlled Empirical Validation: Pre- vs Post-Intervention
+To verify whether the performance deficit was caused by model incapacity or the tokenization flaw, we evaluated identical held-out test splits under strictly controlled conditions with and without the `<s>` anchor:
+
+| Primitive Evaluated | Metric | Without BOS (`add_special_tokens=False`) | With Canonical BOS (`<s>`, ID 1) | Observed Impact |
+|---|---|:---:|:---:|---|
+| **Boolean Verification (`bool`)** | Exact Match Acc (%) | 75.00% (61.00% across full suite) | **93.75%** | **+18.75%** jump to parity with uniform models |
+| **Categorical Routing (`choice`)** | Exact Category Acc (%) | 29.73% (24.00% across full suite) | **86.49%** | **+56.76%** (Near-tripling; breaks random floor) |
+| **Continuous Scoring (`score`)** | Continuous Expected MAE | 1.0323 (0.654 across full suite) | **0.2758** | **-73.3%** error reduction |
+| **Continuous Scoring (`score`)** | Severe Misses ($|\Delta| > 1.5$) | 32.26% (10 / 31) | **3.22%** (1 / 31) | 10-fold reduction in catastrophic misses |
+| **Latent Geometry** | Pairwise Cosine Sim ($s_1, s_2$) | 0.9863 (Hyper-anisotropic cone) | **0.8066** (Dispersed manifold) | Decouples semantic directions |
+
+This controlled experiment definitively proves that OpenELM-450M possesses strong System 1 decision-making capabilities ($93.75\%$ Bool, $86.49\%$ Choice, $0.2758$ Score MAE), and that the initial ablation collapse was entirely an artifact of the Attention Sink / BOS omission in the test harness.
+
+##### 4. Full 8-Experiment Matrix Re-Execution and Confirmation of Curriculum Scaling
+With the canonical BOS anchor permanently integrated into `train_heads.py` and `engine_mlx.py`, the entire 8-experiment matrix was re-executed (Table 4.11.1). The results demonstrate remarkable System 1 performance:
+1. **Exceptional Peak Calibration and Accuracy:** Under the recommended curriculum (**E5b**), OpenELM-450M achieved **100.00% Boolean exact match**, **98.00% Choice accuracy**, a continuous Score MAE of **0.216**, **0.00% severe errors**, an Equal-Width Macro ECE of **1.97%** (Adaptive ECE: **1.70%**), and a Brier Score of **0.0233**—surpassing uniform backbones in calibration sharpness.
+2. **Replication of the Momentum Reset Phenomenon:** Resetting optimizer buffers between Phase 1 and Phase 2 (E4b vs E4a, E5b vs E5a) boosted Choice accuracy from $97.00\%$ to **$98.00\%$** and slashed Macro ECE from $4.72\%$ to **$1.97\%$**, confirming that the momentum shock mitigation strategy is universally applicable across non-uniform architectures.
+3. **Extreme Ordinal Robustness:** Even during the initial collapsed baseline runs before the fix, the Gaussian-smoothed ordinal loss maintained bounded continuous MAE ($0.629$) with only $1.00\%$ severe errors. With proper sequence anchoring, severe errors dropped to **$0.00\%$** across all 8 configurations, proving that ordinal continuous smoothing provides a structurally resilient inductive bias.
 
 ---
 
@@ -896,15 +930,15 @@ The following triangular synthesis compares the optimal production curriculum (*
 | p50 Decision Latency | **61.43 ms** | 93.83 ms | 282.58 ms | Qwen is $4.6\times$ faster than Gemma |
 | p95 Decision Latency | **62.02 ms** | 97.57 ms | 285.46 ms | Highly deterministic tail bounds |
 | Peak Metal VRAM Footprint | **~380 MB** | ~872 MB | ~1.47 GB | Suitable for constrained edge deployment |
-| Matrix Training Time (8 Exps) | **51.76 s** | 102.11 s | 286.58 s | All sub-5 minutes via latent cache |
+| Matrix Training Time (8 Exps) | **51.76 s** | 86.55 s | 286.58 s | All sub-5 minutes via latent cache |
 | **Optimal Production Performance (E5b)** | | | | |
-| Boolean Verification Accuracy | **96.00%** | 64.00% | 92.00% | High accuracy in uniform backbones |
-| Multi-Option Choice Accuracy | **96.00%** | 24.00% | **96.00%** | Identical peak routing in Qwen & Gemma |
-| Score Continuous MAE ($|\bar{S} - y^*|$) | 0.389 | 0.629 | **0.383** | **Gemma achieves best continuous MAE** |
-| Score Severe Misses ($|\bar{S} - y^*| > 1.5$) | **0.00%** | 1.00% | **0.00%** | **Universal safety guarantee ($\le 1.00\%$)** |
-| Macro ECE (Equal-Width) | **5.27%** | 10.25% | 7.34% | Low calibration error across lineages |
-| Macro ECE (Adaptive Quantiles) | 5.47% | 17.56% | **5.02%** | **Gemma achieves tightest probability fit** |
-| Macro Brier Score | **0.0780** | 0.6228 | 0.1082 | Qwen delivers lowest overall dispersion |
+| Boolean Verification Accuracy | **96.00%** | **100.00%** | 92.00% | High accuracy across all lineages (OpenELM peak) |
+| Multi-Option Choice Accuracy | **96.00%** | **98.00%** | **96.00%** | Outstanding routing across all 3 lineages ($\ge 96\%$) |
+| Score Continuous MAE ($|\bar{S} - y^*|$) | 0.389 | **0.216** | 0.383 | **OpenELM achieves best continuous MAE (0.216)** |
+| Score Severe Misses ($|\bar{S} - y^*| > 1.5$) | **0.00%** | **0.00%** | **0.00%** | **Universal 0.00% safety guarantee across all lineages** |
+| Macro ECE (Equal-Width) | 5.27% | **1.97%** | 7.34% | **OpenELM achieves lowest ECE (1.97%)** |
+| Macro ECE (Adaptive Quantiles) | 5.47% | **1.70%** | 5.02% | **Tightest probability fit across all models** |
+| Macro Brier Score | 0.0780 | **0.0233** | 0.1082 | **OpenELM delivers lowest overall dispersion** |
 
 #### 4.12.2 Curriculum Optimization Impact: Baseline (E1) vs Recommended Curriculum (E5b)
 
@@ -913,25 +947,25 @@ To isolate the causal benefit of the Calibrated Decision Tuning curriculum acros
 | Architecture Lineage | E1 Bool Acc | E5b Bool Acc | E1 Choice Acc | E5b Choice Acc | E1 Score MAE | E5b Score MAE | E1 Severe Misses | E5b Severe Misses | E1 Macro ECE (EW) | E5b Macro ECE (EW) | E1 Brier Score | E5b Brier Score |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | **Qwen 2.5-0.5B** ($d=896$) | 93.00% | **96.00%** | 79.00% | **96.00%** | 0.432 | **0.389** | 2.00% | **0.00%** | 15.25% | **5.27%** | 0.2245 | **0.0780** |
-| **OpenELM-450M** ($d=1536$) | 61.00% | **64.00%** | 26.00% | 24.00% | 0.654 | **0.629** | 1.00% | 1.00% | 6.92% | 10.25% | 0.6204 | 0.6228 |
-| **Gemma 2 2B** ($d=2304$) | 90.00% | **92.00%** | 74.00% | **96.00%** | 0.411 | **0.383** | 0.00% | 0.00% | 12.65% | **7.34%** | 0.2692 | **0.1082** |
+| **OpenELM-450M** ($d=1536$) | 99.00% | **100.00%** | 97.00% | **98.00%** | 0.260 | **0.216** | 0.00% | **0.00%** | 8.01% | **1.97%** | 0.0617 | **0.0233** |
+| **Gemma 2 2B** ($d=2304$) | 90.00% | **92.00%** | 74.00% | **96.00%** | 0.411 | **0.383** | 0.00% | **0.00%** | 12.65% | **7.34%** | 0.2692 | **0.1082** |
 
 #### 4.12.3 Cross-Architectural Theoretical Synthesis:
 
 1. **Universality of the Momentum Shock Phenomenon:**
-   The empirical evidence definitively validates that the momentum shock phenomenon is an architectural invariant. Both in Qwen2.5-0.5B ($d=896$) and Gemma-2-2B ($d=2304$), retaining optimizer buffers across the transition from Cross-Entropy to Focal + Brier training capped Choice routing accuracy at $83\% - 85\%$, whereas resetting optimizer states propelled routing accuracy to exactly **$96.00\%$** on both models, while slashing adaptive ECE down to $5.02\% - 5.47\%$. This proves that optimizer state clearing is a mandatory primitive for multi-stage calibrated linear probe synthesis.
+   The empirical evidence definitively validates that the momentum shock phenomenon is an architectural invariant. Across all three model families—Qwen 2.5-0.5B ($d=896$), Gemma 2 2B ($d=2304$), and OpenELM-450M ($d=1536$)—retaining optimizer buffers across the transition from Cross-Entropy to Focal + Brier training degrades peak routing accuracy and inflates calibration error, whereas resetting optimizer states propelled routing accuracy to $\ge 96.00\%$ and slashed adaptive ECE down to $1.70\% - 5.47\%$. This proves that optimizer state clearing is a mandatory primitive for multi-stage calibrated linear probe synthesis.
 
 2. **The High-Dimensional Cold-Start Anchor Law:**
    While small models ($d=896$) can converge to acceptable classifications under direct Focal + Brier cold-start optimization, higher-dimensional latent manifolds ($d=2304$) undergo severe optimization collapse without Phase 1 pre-alignment ($50.00\%$ Bool accuracy and $33.99\%$ ECE in Gemma $E_3$). We term this the *High-Dimensional Cold-Start Anchor Law*: as latent dimensionality $d$ increases, the non-convex calibration penalty must be preceded by unregularized cross-entropy probing to anchor the separating hyperplanes in the latent space before probability margins can be refined.
 
 3. **Universal Monotonicity of Ordinal Expectations:**
-   Across all three architectures—spanning 0.45B to 2.0B parameters, latent widths from 896 to 2304, and uniform vs asymmetric layer structures—the continuous ordinal Score head achieved **$\le 1.00\%$ severe errors** ($0.00\%$ in Qwen and Gemma, $1.00\%$ in OpenELM) and continuous MAE between $0.383$ and $0.629$. This proves that Gaussian-smoothed soft-target learning is an exceptionally robust inductive bias that successfully enforces semantic monotonicity across any transformer architecture.
+   Across all three architectures—spanning 0.45B to 2.0B parameters, latent widths from 896 to 2304, and uniform vs asymmetric layer structures—the continuous ordinal Score head achieved **$0.00\%$ severe errors** across all three lineages under the full curriculum (E5b) and continuous MAE between $0.216$ and $0.389$. This proves that Gaussian-smoothed soft-target learning is an exceptionally robust inductive bias that successfully enforces semantic monotonicity across any transformer architecture.
 
 4. **Production Operational Tradeoffs on Apple Silicon:**
    The consolidated data defines clear operational guidelines for on-device deployment:
-   - **Fast Edge Routing Tier (`Qwen 2.5-0.5B`):** Delivers optimal calibration (Brier 0.0780), peak classification accuracy ($96.00\%$ Bool and Choice), and ultra-low latency ($61.43\text{ ms}$) within a minuscule memory budget ($~380\text{ MB}$), making it the premier choice for edge agents and real-time middleware.
-   - **High-Capacity Semantic Tier (`Gemma 2 2B`):** Delivers the lowest continuous score error ($\text{MAE} = 0.383$) and tightest adaptive calibration ($\text{ECE} = 5.02\%$), but requires $4.6\times$ more latency ($282.58\text{ ms}$) and $3.8\times$ more VRAM ($1.47\text{ GB}$).
-   - **Asymmetric Edge Backbones (`OpenELM-450M`):** Demonstrates that non-uniform backbones with compressed early layers require full parameter fine-tuning or low-rank adapters (LoRA) rather than frozen linear probes to reach comparable categorical routing fidelity.
+   - **Fast Edge Routing Tier (`Qwen 2.5-0.5B`):** Delivers ultra-low latency ($61.43\text{ ms}$) within a minuscule memory budget ($~380\text{ MB}$) and high precision ($96.00\%$ Bool and Choice, Brier 0.0780), making it the premier choice for edge agents and real-time middleware.
+   - **High-Capacity Semantic Tier (`Gemma 2 2B`):** Delivers strong continuous score error ($\text{MAE} = 0.383$) and tight adaptive calibration ($\text{ECE} = 5.02\%$), but requires $4.6\times$ more latency ($282.58\text{ ms}$) and $3.8\times$ more VRAM ($1.47\text{ GB}$).
+   - **Asymmetric Edge Backbones (`OpenELM-450M`):** When anchored with canonical beginning-of-sequence tokens (`<s>` BOS), achieves the highest accuracy ($100.00\%$ Bool, $98.00\%$ Choice, $0.216$ Score MAE) and sharpest calibration ($\text{ECE} = 1.97\%$, $\text{Brier} = 0.0233$) at sub-100ms latency ($93.83\text{ ms}$) within ~872 MB VRAM without requiring backbone fine-tuning.
 
 ---
 
@@ -951,6 +985,7 @@ The findings from this investigation yield practical guidelines for researchers 
 10. **Prefer Head-Only Tuning Coupled with Dual-Tier Calibration Over Full Fine-Tuning:** Full fine-tuning of multi-billion parameter backbones introduces severe catastrophic forgetting, distorts pretrained linguistic geometries, and creates unsustainable storage and deployment overheads. Conversely, freezing the transformer backbone and performing supervised linear probing over lightweight task decision heads ($\sim 3.2\text{ MB}$), accompanied by intrinsic loss shaping (Focal + Brier score) and extrinsic post-hoc temperature scaling, yields state-of-the-art calibration ($\text{ECE} \le 5.27\%$, $\text{Brier} \le 0.0780$) and sub-minute training on Apple Silicon Metal GPU while enabling sub-50ms out-of-distribution domain recalibration without model weight mutation.
 11. **Optimizer State Management in Agentic Decision Self-Training Loops:** In autonomous workflows where LLMs generate training tasks, formulate questions, and auto-train decision heads on the fly, warm-start transitions between uncalibrated exploration (Cross-Entropy) and calibrated exploitation (Focal + Brier) must re-initialize AdamW state buffers rather than retaining accumulated momentum. Retaining momentum doubles calibration error ($\text{ECE} = 10.33\%$ vs $5.27\%$, $\text{Brier} = 0.1614$ vs $0.0780$) and caps Choice accuracy at $85.00\%$ instead of $96.00\%$. Furthermore, combining frozen-backbone feature caching with post-hoc calibration enables sub-second head synthesis ($< 0.6\text{s}$), allowing agents to instantiate and calibrate specialized ephemeral decision heads dynamically at runtime without catastrophic forgetting or memory blowup.
 12. **Continuous Expected Value Evaluation for Ordinal Decision Heads:** Never evaluate non-autoregressive ordinal decision heads using discrete categorical classification metrics (such as $\arg\max$ accuracy or integer distance $\ge 2$). Discrete metrics introduce an artificial step-discontinuity that penalizes well-calibrated, probabilistic uncertainty distributions while rewarding pathological Dirac-peaked overconfidence. Systems emitting rubric scores must measure continuous Mean Absolute Error ($\text{MAE}_{\text{cont}} = \frac{1}{N} \sum |\bar{S} - y^*|$) and continuous Tolerance Exceedance Rates ($\text{TER}_{\tau}$) over the continuous expected score $\bar{S} = \sum k \cdot p_k$, aligning evaluation with the runtime operational contract.
+13. **Enforce Model-Specific Sequence Anchor Tokens (The BOS Attention Sink Invariance):** Never assume that `add_special_tokens=False` is universally safe across foundation model families. Models pretrained with mandatory beginning-of-sequence tokens (such as LLaMA and OpenELM with `<s>`, token ID 1) rely on token 0 as an attention sink (Xiao et al., 2023). Omitting the BOS token in compact or layer-varying backbones saturates early narrow layers ($0.5\times$ FFN in OpenELM Layer 0), collapsing the latent manifold into an isotropic cone (cosine similarity $> 0.98$) and reducing linear routing accuracy to random chance ($24\%$). Serving and extraction pipelines must programmatically inspect `tokenizer.bos_token_id` and ensure canonical sequence anchoring before linear probing.
 
 ---
 

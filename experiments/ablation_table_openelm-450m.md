@@ -2,11 +2,11 @@
 
 | Experiment ID | Pipeline Configuration | Fase 2 Opt | Bool Acc (%) | Choice Acc (%) | Score Cont MAE | Score Severe (>1.5) | ECE (%) [Equal Width] | ECE (%) [Adaptive] | Brier Score |
 |---|---|---|---|---|---|---|---|---|---|
-| **E1** | Phase 1 (Classical CE) | — | 61.00 | 26.00 | 0.654 | 1.00% | 6.92 | 13.76 | 0.6204 |
-| **E2** | Phase 1 (CE) + Phase 3 (Post-Hoc T) | — | 61.00 | 26.00 | 0.654 | 1.00% | 6.27 | 14.22 | 0.6227 |
-| **E3** | Phase 1 (Focal + Brier) | — | 54.00 | 28.00 | 0.654 | 1.00% | 13.85 | 16.42 | 0.6289 |
-| **E4a** | Phase 1 (CE) + Phase 2 (Refinement) | Continuous | 64.00 | 26.00 | 0.640 | 1.00% | 7.11 | 16.21 | 0.6211 |
-| **E4b** | Phase 1 (CE) + Phase 2 (Refinement) | Reset | 64.00 | 24.00 | 0.629 | 1.00% | 9.62 | 16.44 | 0.6126 |
-| **E5a** | Full Curriculum (P1 + P2 + P3) | Continuous | 64.00 | 26.00 | 0.640 | 1.00% | 8.61 | 16.10 | 0.6290 |
-| **E5b** | Full Curriculum (P1 + P2 + P3) | Reset | 64.00 | 24.00 | 0.629 | 1.00% | 10.25 | 17.56 | 0.6228 |
-| **E6** | Direct Pipeline (P1[FB] + P3) | — | 54.00 | 28.00 | 0.654 | 1.00% | 6.82 | 17.50 | 0.6306 |
+| **E1** | Phase 1 (Classical CE) | — | 99.00 | 97.00 | 0.260 | 0.00% | 8.01 | 8.01 | 0.0617 |
+| **E2** | Phase 1 (CE) + Phase 3 (Post-Hoc T) | — | 99.00 | 97.00 | 0.260 | 0.00% | 5.97 | 5.97 | 0.0544 |
+| **E3** | Phase 1 (Focal + Brier) | — | 100.00 | 96.00 | 0.265 | 0.00% | 9.11 | 9.11 | 0.0718 |
+| **E4a** | Phase 1 (CE) + Phase 2 (Refinement) | Continuous | 99.00 | 97.00 | 0.254 | 0.00% | 6.98 | 7.44 | 0.0542 |
+| **E4b** | Phase 1 (CE) + Phase 2 (Refinement) | Reset | 100.00 | 98.00 | 0.216 | 0.00% | 4.20 | 3.94 | 0.0306 |
+| **E5a** | Full Curriculum (P1 + P2 + P3) | Continuous | 99.00 | 97.00 | 0.254 | 0.00% | 4.72 | 5.18 | 0.0449 |
+| **E5b** | Full Curriculum (P1 + P2 + P3) | Reset | 100.00 | 98.00 | 0.216 | 0.00% | 1.97 | 1.70 | 0.0233 |
+| **E6** | Direct Pipeline (P1[FB] + P3) | — | 100.00 | 96.00 | 0.265 | 0.00% | 5.35 | 5.35 | 0.0521 |

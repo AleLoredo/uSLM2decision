@@ -174,6 +174,9 @@ class MLXInferenceEngine(BaseInferenceEngine):
                 seq_tokens = s_tokens + q_tokens
                 if not seq_tokens:
                     seq_tokens = [1]
+                bos_id = getattr(self.tokenizer, "bos_token_id", None)
+                if bos_id is not None and (not seq_tokens or seq_tokens[0] != bos_id):
+                    seq_tokens = [bos_id] + seq_tokens
                 input_ids = mx.array([seq_tokens])
                 hidden_states = self.backbone(input_ids)
                 h_q = hidden_states[:, -1, :].astype(mx.float32)
@@ -202,9 +205,12 @@ class MLXInferenceEngine(BaseInferenceEngine):
 
                 if self.backbone is not None:
                     opt_vectors = []
+                    bos_id = getattr(self.tokenizer, "bos_token_id", None)
                     for opt in options:
                         opt_text = f"{opt['id']}: {opt['description']}" if opt.get("id") else opt.get("description", "")
                         opt_tokens = self._tokenize(opt_text) or [1]
+                        if bos_id is not None and (not opt_tokens or opt_tokens[0] != bos_id):
+                            opt_tokens = [bos_id] + opt_tokens
                         opt_hidden = self.backbone(mx.array([opt_tokens]))
                         opt_vectors.append(opt_hidden[:, -1, :].astype(mx.float32))
                     e_options = mx.concatenate(opt_vectors, axis=0)

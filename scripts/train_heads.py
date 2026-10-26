@@ -152,6 +152,11 @@ class HeadTrainer:
             tokens = (s_tokens + q_tokens) or [1]
         else:
             tokens = self.tokenizer.encode(state_text, add_special_tokens=False) or [1]
+
+        bos_id = getattr(self.tokenizer, "bos_token_id", None)
+        if bos_id is not None and (not tokens or tokens[0] != bos_id):
+            tokens = [bos_id] + tokens
+
         hidden = self.backbone(mx.array([tokens]))
         emb = hidden[:, -1, :].astype(mx.float32)
         mx.eval(emb)

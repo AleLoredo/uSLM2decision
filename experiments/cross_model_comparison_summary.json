@@ -427,38 +427,38 @@
       },
       "metrics": {
         "bool": {
-          "acc": 61.0,
-          "ece_equal_width": 7.08,
-          "ece_adaptive": 17.05,
-          "brier_score": 0.4744
+          "acc": 99.0,
+          "ece_equal_width": 8.47,
+          "ece_adaptive": 8.47,
+          "brier_score": 0.036
         },
         "choice": {
-          "acc": 26.0,
-          "ece_equal_width": 6.77,
-          "ece_adaptive": 10.48,
-          "brier_score": 0.7664
+          "acc": 97.0,
+          "ece_equal_width": 7.55,
+          "ece_adaptive": 7.55,
+          "brier_score": 0.0873
         },
         "score": {
-          "acc": 27.0,
-          "mae_cont": 0.654,
-          "rmse_cont": 0.803,
-          "severe_misses_pct": 1.0,
-          "tolerance_05_pct": 58.0,
-          "tolerance_10_pct": 36.0,
-          "off_by_1_pct": 38.0,
-          "mae_disc": 1.08,
-          "mae": 0.654
+          "acc": 91.0,
+          "mae_cont": 0.26,
+          "rmse_cont": 0.408,
+          "severe_misses_pct": 0.0,
+          "tolerance_05_pct": 14.0,
+          "tolerance_10_pct": 7.0,
+          "off_by_1_pct": 3.0,
+          "mae_disc": 0.15,
+          "mae": 0.26
         },
         "summary": {
-          "macro_acc": 38.0,
-          "macro_ece_equal_width": 6.92,
-          "macro_ece_adaptive": 13.76,
-          "macro_brier": 0.6204,
-          "score_mae_cont": 0.654,
-          "score_severe_misses_pct": 1.0
+          "macro_acc": 95.67,
+          "macro_ece_equal_width": 8.01,
+          "macro_ece_adaptive": 8.01,
+          "macro_brier": 0.0617,
+          "score_mae_cont": 0.26,
+          "score_severe_misses_pct": 0.0
         }
       },
-      "time_seconds": 0.74,
+      "time_seconds": 0.71,
       "output_dir": "./experiments/run/TDS2_openelm-450m/E1"
     },
     {
@@ -478,38 +478,38 @@
       },
       "metrics": {
         "bool": {
-          "acc": 61.0,
-          "ece_equal_width": 5.77,
-          "ece_adaptive": 17.97,
-          "brier_score": 0.479
+          "acc": 99.0,
+          "ece_equal_width": 4.38,
+          "ece_adaptive": 4.38,
+          "brier_score": 0.0215
         },
         "choice": {
-          "acc": 26.0,
-          "ece_equal_width": 6.77,
-          "ece_adaptive": 10.48,
-          "brier_score": 0.7664
+          "acc": 97.0,
+          "ece_equal_width": 7.55,
+          "ece_adaptive": 7.55,
+          "brier_score": 0.0873
         },
         "score": {
-          "acc": 27.0,
-          "mae_cont": 0.654,
-          "rmse_cont": 0.803,
-          "severe_misses_pct": 1.0,
-          "tolerance_05_pct": 58.0,
-          "tolerance_10_pct": 36.0,
-          "off_by_1_pct": 38.0,
-          "mae_disc": 1.08,
-          "mae": 0.654
+          "acc": 91.0,
+          "mae_cont": 0.26,
+          "rmse_cont": 0.408,
+          "severe_misses_pct": 0.0,
+          "tolerance_05_pct": 14.0,
+          "tolerance_10_pct": 7.0,
+          "off_by_1_pct": 3.0,
+          "mae_disc": 0.15,
+          "mae": 0.26
         },
         "summary": {
-          "macro_acc": 38.0,
-          "macro_ece_equal_width": 6.27,
-          "macro_ece_adaptive": 14.22,
-          "macro_brier": 0.6227,
-          "score_mae_cont": 0.654,
-          "score_severe_misses_pct": 1.0
+          "macro_acc": 95.67,
+          "macro_ece_equal_width": 5.97,
+          "macro_ece_adaptive": 5.97,
+          "macro_brier": 0.0544,
+          "score_mae_cont": 0.26,
+          "score_severe_misses_pct": 0.0
         }
       },
-      "time_seconds": 0.91,
+      "time_seconds": 0.7,
       "output_dir": "./experiments/run/TDS2_openelm-450m/E2"
     },
     {
@@ -529,38 +529,38 @@
       },
       "metrics": {
         "bool": {
-          "acc": 54.0,
-          "ece_equal_width": 16.67,
-          "ece_adaptive": 21.25,
-          "brier_score": 0.4871
+          "acc": 100.0,
+          "ece_equal_width": 12.5,
+          "ece_adaptive": 12.5,
+          "brier_score": 0.0591
         },
         "choice": {
-          "acc": 28.0,
-          "ece_equal_width": 11.02,
-          "ece_adaptive": 11.58,
-          "brier_score": 0.7706
+          "acc": 96.0,
+          "ece_equal_width": 5.72,
+          "ece_adaptive": 5.72,
+          "brier_score": 0.0846
         },
         "score": {
-          "acc": 26.0,
-          "mae_cont": 0.654,
-          "rmse_cont": 0.802,
-          "severe_misses_pct": 1.0,
-          "tolerance_05_pct": 59.0,
-          "tolerance_10_pct": 37.0,
-          "off_by_1_pct": 38.0,
-          "mae_disc": 1.1,
-          "mae": 0.654
+          "acc": 92.0,
+          "mae_cont": 0.265,
+          "rmse_cont": 0.407,
+          "severe_misses_pct": 0.0,
+          "tolerance_05_pct": 14.0,
+          "tolerance_10_pct": 6.0,
+          "off_by_1_pct": 3.0,
+          "mae_disc": 0.13,
+          "mae": 0.265
         },
         "summary": {
-          "macro_acc": 36.0,
-          "macro_ece_equal_width": 13.85,
-          "macro_ece_adaptive": 16.42,
-          "macro_brier": 0.6289,
-          "score_mae_cont": 0.654,
-          "score_severe_misses_pct": 1.0
+          "macro_acc": 96.0,
+          "macro_ece_equal_width": 9.11,
+          "macro_ece_adaptive": 9.11,
+          "macro_brier": 0.0718,
+          "score_mae_cont": 0.265,
+          "score_severe_misses_pct": 0.0
         }
       },
-      "time_seconds": 0.77,
+      "time_seconds": 0.86,
       "output_dir": "./experiments/run/TDS2_openelm-450m/E3"
     },
     {
@@ -580,38 +580,38 @@
       },
       "metrics": {
         "bool": {
-          "acc": 64.0,
-          "ece_equal_width": 9.18,
-          "ece_adaptive": 20.26,
-          "brier_score": 0.4756
+          "acc": 99.0,
+          "ece_equal_width": 8.31,
+          "ece_adaptive": 8.31,
+          "brier_score": 0.0318
         },
         "choice": {
-          "acc": 26.0,
-          "ece_equal_width": 5.05,
-          "ece_adaptive": 12.16,
-          "brier_score": 0.7667
+          "acc": 97.0,
+          "ece_equal_width": 5.65,
+          "ece_adaptive": 6.57,
+          "brier_score": 0.0766
         },
         "score": {
-          "acc": 36.0,
-          "mae_cont": 0.64,
-          "rmse_cont": 0.786,
-          "severe_misses_pct": 1.0,
-          "tolerance_05_pct": 59.0,
-          "tolerance_10_pct": 34.0,
-          "off_by_1_pct": 37.0,
-          "mae_disc": 0.91,
-          "mae": 0.64
+          "acc": 93.0,
+          "mae_cont": 0.254,
+          "rmse_cont": 0.395,
+          "severe_misses_pct": 0.0,
+          "tolerance_05_pct": 15.0,
+          "tolerance_10_pct": 5.0,
+          "off_by_1_pct": 3.0,
+          "mae_disc": 0.11,
+          "mae": 0.254
         },
         "summary": {
-          "macro_acc": 42.0,
-          "macro_ece_equal_width": 7.11,
-          "macro_ece_adaptive": 16.21,
-          "macro_brier": 0.6211,
-          "score_mae_cont": 0.64,
-          "score_severe_misses_pct": 1.0
+          "macro_acc": 96.33,
+          "macro_ece_equal_width": 6.98,
+          "macro_ece_adaptive": 7.44,
+          "macro_brier": 0.0542,
+          "score_mae_cont": 0.254,
+          "score_severe_misses_pct": 0.0
         }
       },
-      "time_seconds": 1.3,
+      "time_seconds": 1.0,
       "output_dir": "./experiments/run/TDS2_openelm-450m/E4a"
     },
     {
@@ -631,38 +631,38 @@
       },
       "metrics": {
         "bool": {
-          "acc": 64.0,
-          "ece_equal_width": 10.86,
-          "ece_adaptive": 21.17,
-          "brier_score": 0.4696
+          "acc": 100.0,
+          "ece_equal_width": 6.49,
+          "ece_adaptive": 6.49,
+          "brier_score": 0.0179
         },
         "choice": {
-          "acc": 24.0,
-          "ece_equal_width": 8.37,
-          "ece_adaptive": 11.71,
-          "brier_score": 0.7557
+          "acc": 98.0,
+          "ece_equal_width": 1.9,
+          "ece_adaptive": 1.38,
+          "brier_score": 0.0433
         },
         "score": {
-          "acc": 54.0,
-          "mae_cont": 0.629,
-          "rmse_cont": 0.774,
-          "severe_misses_pct": 1.0,
-          "tolerance_05_pct": 59.0,
-          "tolerance_10_pct": 26.0,
-          "off_by_1_pct": 36.0,
-          "mae_disc": 0.56,
-          "mae": 0.629
+          "acc": 93.0,
+          "mae_cont": 0.216,
+          "rmse_cont": 0.358,
+          "severe_misses_pct": 0.0,
+          "tolerance_05_pct": 12.0,
+          "tolerance_10_pct": 5.0,
+          "off_by_1_pct": 3.0,
+          "mae_disc": 0.11,
+          "mae": 0.216
         },
         "summary": {
-          "macro_acc": 47.33,
-          "macro_ece_equal_width": 9.62,
-          "macro_ece_adaptive": 16.44,
-          "macro_brier": 0.6126,
-          "score_mae_cont": 0.629,
-          "score_severe_misses_pct": 1.0
+          "macro_acc": 97.0,
+          "macro_ece_equal_width": 4.2,
+          "macro_ece_adaptive": 3.94,
+          "macro_brier": 0.0306,
+          "score_mae_cont": 0.216,
+          "score_severe_misses_pct": 0.0
         }
       },
-      "time_seconds": 1.27,
+      "time_seconds": 0.96,
       "output_dir": "./experiments/run/TDS2_openelm-450m/E4b"
     },
     {
@@ -682,38 +682,38 @@
       },
       "metrics": {
         "bool": {
-          "acc": 64.0,
-          "ece_equal_width": 12.16,
-          "ece_adaptive": 20.05,
-          "brier_score": 0.4913
+          "acc": 99.0,
+          "ece_equal_width": 3.78,
+          "ece_adaptive": 3.78,
+          "brier_score": 0.0132
         },
         "choice": {
-          "acc": 26.0,
-          "ece_equal_width": 5.05,
-          "ece_adaptive": 12.16,
-          "brier_score": 0.7667
+          "acc": 97.0,
+          "ece_equal_width": 5.65,
+          "ece_adaptive": 6.57,
+          "brier_score": 0.0766
         },
         "score": {
-          "acc": 36.0,
-          "mae_cont": 0.64,
-          "rmse_cont": 0.786,
-          "severe_misses_pct": 1.0,
-          "tolerance_05_pct": 59.0,
-          "tolerance_10_pct": 34.0,
-          "off_by_1_pct": 37.0,
-          "mae_disc": 0.91,
-          "mae": 0.64
+          "acc": 93.0,
+          "mae_cont": 0.254,
+          "rmse_cont": 0.395,
+          "severe_misses_pct": 0.0,
+          "tolerance_05_pct": 15.0,
+          "tolerance_10_pct": 5.0,
+          "off_by_1_pct": 3.0,
+          "mae_disc": 0.11,
+          "mae": 0.254
         },
         "summary": {
-          "macro_acc": 42.0,
-          "macro_ece_equal_width": 8.61,
-          "macro_ece_adaptive": 16.1,
-          "macro_brier": 0.629,
-          "score_mae_cont": 0.64,
-          "score_severe_misses_pct": 1.0
+          "macro_acc": 96.33,
+          "macro_ece_equal_width": 4.72,
+          "macro_ece_adaptive": 5.18,
+          "macro_brier": 0.0449,
+          "score_mae_cont": 0.254,
+          "score_severe_misses_pct": 0.0
         }
       },
-      "time_seconds": 1.28,
+      "time_seconds": 1.02,
       "output_dir": "./experiments/run/TDS2_openelm-450m/E5a"
     },
     {
@@ -733,38 +733,38 @@
       },
       "metrics": {
         "bool": {
-          "acc": 64.0,
-          "ece_equal_width": 12.13,
-          "ece_adaptive": 23.41,
-          "brier_score": 0.4899
+          "acc": 100.0,
+          "ece_equal_width": 2.03,
+          "ece_adaptive": 2.03,
+          "brier_score": 0.0032
         },
         "choice": {
-          "acc": 24.0,
-          "ece_equal_width": 8.37,
-          "ece_adaptive": 11.71,
-          "brier_score": 0.7557
+          "acc": 98.0,
+          "ece_equal_width": 1.9,
+          "ece_adaptive": 1.38,
+          "brier_score": 0.0433
         },
         "score": {
-          "acc": 54.0,
-          "mae_cont": 0.629,
-          "rmse_cont": 0.774,
-          "severe_misses_pct": 1.0,
-          "tolerance_05_pct": 59.0,
-          "tolerance_10_pct": 26.0,
-          "off_by_1_pct": 36.0,
-          "mae_disc": 0.56,
-          "mae": 0.629
+          "acc": 93.0,
+          "mae_cont": 0.216,
+          "rmse_cont": 0.358,
+          "severe_misses_pct": 0.0,
+          "tolerance_05_pct": 12.0,
+          "tolerance_10_pct": 5.0,
+          "off_by_1_pct": 3.0,
+          "mae_disc": 0.11,
+          "mae": 0.216
         },
         "summary": {
-          "macro_acc": 47.33,
-          "macro_ece_equal_width": 10.25,
-          "macro_ece_adaptive": 17.56,
-          "macro_brier": 0.6228,
-          "score_mae_cont": 0.629,
-          "score_severe_misses_pct": 1.0
+          "macro_acc": 97.0,
+          "macro_ece_equal_width": 1.97,
+          "macro_ece_adaptive": 1.7,
+          "macro_brier": 0.0233,
+          "score_mae_cont": 0.216,
+          "score_severe_misses_pct": 0.0
         }
       },
-      "time_seconds": 1.13,
+      "time_seconds": 1.12,
       "output_dir": "./experiments/run/TDS2_openelm-450m/E5b"
     },
     {
@@ -784,38 +784,38 @@
       },
       "metrics": {
         "bool": {
-          "acc": 54.0,
-          "ece_equal_width": 2.61,
-          "ece_adaptive": 23.41,
-          "brier_score": 0.4905
+          "acc": 100.0,
+          "ece_equal_width": 4.99,
+          "ece_adaptive": 4.99,
+          "brier_score": 0.0195
         },
         "choice": {
-          "acc": 28.0,
-          "ece_equal_width": 11.02,
-          "ece_adaptive": 11.58,
-          "brier_score": 0.7706
+          "acc": 96.0,
+          "ece_equal_width": 5.72,
+          "ece_adaptive": 5.72,
+          "brier_score": 0.0846
         },
         "score": {
-          "acc": 26.0,
-          "mae_cont": 0.654,
-          "rmse_cont": 0.802,
-          "severe_misses_pct": 1.0,
-          "tolerance_05_pct": 59.0,
-          "tolerance_10_pct": 37.0,
-          "off_by_1_pct": 38.0,
-          "mae_disc": 1.1,
-          "mae": 0.654
+          "acc": 92.0,
+          "mae_cont": 0.265,
+          "rmse_cont": 0.407,
+          "severe_misses_pct": 0.0,
+          "tolerance_05_pct": 14.0,
+          "tolerance_10_pct": 6.0,
+          "off_by_1_pct": 3.0,
+          "mae_disc": 0.13,
+          "mae": 0.265
         },
         "summary": {
-          "macro_acc": 36.0,
-          "macro_ece_equal_width": 6.82,
-          "macro_ece_adaptive": 17.5,
-          "macro_brier": 0.6306,
-          "score_mae_cont": 0.654,
-          "score_severe_misses_pct": 1.0
+          "macro_acc": 96.0,
+          "macro_ece_equal_width": 5.35,
+          "macro_ece_adaptive": 5.35,
+          "macro_brier": 0.0521,
+          "score_mae_cont": 0.265,
+          "score_severe_misses_pct": 0.0
         }
       },
-      "time_seconds": 0.9,
+      "time_seconds": 0.7,
       "output_dir": "./experiments/run/TDS2_openelm-450m/E6"
     }
   ],
