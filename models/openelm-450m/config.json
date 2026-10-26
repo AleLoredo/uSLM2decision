@@ -3,6 +3,10 @@
     "architectures": [
         "OpenELMForCausalLM"
     ],
+    "auto_map": {
+        "AutoConfig": "configuration_openelm.OpenELMConfig",
+        "AutoModelForCausalLM": "modeling_openelm.OpenELMForCausalLM"
+    },
     "bos_token_id": 1,
     "eos_token_id": 2,
     "ffn_dim_divisor": 256,

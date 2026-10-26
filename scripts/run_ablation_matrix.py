@@ -18,6 +18,7 @@ import os
 import sys
 import json
 import time
+import pickle
 import argparse
 from typing import Dict, List, Any
 
@@ -142,9 +143,10 @@ EXPERIMENT_SPECS = [
     }
 ]
 
-def format_markdown_table(results: List[Dict[str, Any]]) -> str:
+def format_markdown_table(results: List[Dict[str, Any]], model_name: str = "") -> str:
+    title = f"### Ablation Study: Training Methodology & Decoupled Calibration Matrix ({model_name})\n" if model_name else "### 4.9 Ablation Study: Training Methodology & Decoupled Calibration Matrix\n"
     lines = [
-        "### 4.9 Ablation Study: Training Methodology & Decoupled Calibration Matrix\n",
+        title,
         "| Experiment ID | Pipeline Configuration | Fase 2 Opt | Bool Acc (%) | Choice Acc (%) | Score Cont MAE | Score Severe (>1.5) | ECE (%) [Equal Width] | ECE (%) [Adaptive] | Brier Score |",
         "|---|---|---|---|---|---|---|---|---|---|"
     ]
@@ -170,7 +172,9 @@ def run_matrix(
     runs_subfolder: str = None,
     seed: int = 42,
     fast_mode: bool = False,
-    selected_experiments: List[str] = None
+    selected_experiments: List[str] = None,
+    use_disk_cache: bool = True,
+    force_recompute: bool = False
 ):
     start_total = time.perf_counter()
     model_name = os.path.basename(os.path.normpath(model_dir))
@@ -199,31 +203,58 @@ def run_matrix(
     print(f"  Runs Dir:    {runs_dir}")
     print(f"  Seed:        {seed}")
     print(f"  Fast:        {fast_mode}")
+    print(f"  Disk Cache:  {use_disk_cache} (force_recompute={force_recompute})")
     print("================================================================================\n")
 
-    # 1. Load backbone and tokenizer once
-    print(f"[Ablation Suite] Loading transformer backbone from '{model_dir}'...")
-    t_load = time.perf_counter()
-    loaded_model = mlx_lm.load(model_dir)
-    model, tokenizer = loaded_model[0], loaded_model[1]
-    print(f"[Ablation Suite] Backbone loaded in {time.perf_counter() - t_load:.2f}s.")
+    # 1. Feature Extraction / Cache Management
+    dataset_slug = os.path.basename(os.path.normpath(dataset_dir))
+    cache_dir = os.path.join(output_base, "cache")
+    os.makedirs(cache_dir, exist_ok=True)
+    cache_file = os.path.join(cache_dir, f"{model_name}_{dataset_slug}_features.pkl")
 
-    # 2. Extract features once and cache in memory
-    print("[Ablation Suite] Extracting representations from frozen backbone (In-Memory Caching)...")
-    t_feat = time.perf_counter()
-    feature_extractor = HeadTrainer(
-        model_dir=model_dir,
-        dataset_dir=dataset_dir,
-        seed=seed,
-        model_instance=model,
-        tokenizer_instance=tokenizer
-    )
-    cached_features = {
-        "train": feature_extractor.extract_features("train"),
-        "val": feature_extractor.extract_features("val"),
-        "test": feature_extractor.extract_features("test")
-    }
-    print(f"[Ablation Suite] All splits cached in memory in {time.perf_counter() - t_feat:.2f}s.\n")
+    cached_features = None
+    if use_disk_cache and not force_recompute and os.path.exists(cache_file):
+        print(f"[Ablation Suite] Loading representations from persistent disk cache: {cache_file}...")
+        t_cache = time.perf_counter()
+        try:
+            with open(cache_file, "rb") as f:
+                cached_features = pickle.load(f)
+            print(f"[Ablation Suite] Representations loaded from disk in {time.perf_counter() - t_cache:.2f}s.\n")
+        except Exception as e:
+            print(f"[Ablation Suite] Warning: Could not read cache ({e}). Re-extracting...")
+            cached_features = None
+
+    model, tokenizer = None, None
+    if cached_features is None:
+        # Load backbone and tokenizer
+        print(f"[Ablation Suite] Loading transformer backbone from '{model_dir}'...")
+        t_load = time.perf_counter()
+        loaded_model = mlx_lm.load(model_dir)
+        model, tokenizer = loaded_model[0], loaded_model[1]
+        print(f"[Ablation Suite] Backbone loaded in {time.perf_counter() - t_load:.2f}s.")
+
+        print("[Ablation Suite] Extracting representations from frozen backbone...")
+        t_feat = time.perf_counter()
+        feature_extractor = HeadTrainer(
+            model_dir=model_dir,
+            dataset_dir=dataset_dir,
+            seed=seed,
+            model_instance=model,
+            tokenizer_instance=tokenizer
+        )
+        cached_features = {
+            "train": feature_extractor.extract_features("train"),
+            "val": feature_extractor.extract_features("val"),
+            "test": feature_extractor.extract_features("test")
+        }
+        print(f"[Ablation Suite] All splits extracted in {time.perf_counter() - t_feat:.2f}s.")
+        if use_disk_cache:
+            try:
+                with open(cache_file, "wb") as f:
+                    pickle.dump(cached_features, f)
+                print(f"[Ablation Suite] Safely persisted feature cache to: {cache_file}\n")
+            except Exception as e:
+                print(f"[Ablation Suite] Warning: Failed to write cache to {cache_file}: {e}\n")
 
     # 3. Execute experiments
     results = []
@@ -275,15 +306,17 @@ def run_matrix(
         })
 
     # 4. Generate Markdown table and summary JSON
-    markdown_table = format_markdown_table(results)
+    markdown_table = format_markdown_table(results, model_name=model_name)
     
-    # Save both in root experiments/ and inside runs_dir
+    # Save both in root experiments/ with model-specific filenames and inside runs_dir
+    model_summary_file = f"ablation_summary_{model_name}.json"
+    model_table_file = f"ablation_table_{model_name}.md"
     summary_paths = [
-        os.path.join(output_base, "ablation_summary.json"),
+        os.path.join(output_base, model_summary_file),
         os.path.join(runs_dir, "ablation_summary.json")
     ]
     table_paths = [
-        os.path.join(output_base, "ablation_table.md"),
+        os.path.join(output_base, model_table_file),
         os.path.join(runs_dir, "ablation_table.md")
     ]
 
@@ -315,6 +348,8 @@ def main():
     parser.add_argument("--seed", type=int, default=42, help="Random seed for all experiments")
     parser.add_argument("--fast", action="store_true", help="Fast mode for smoke tests (reduced epochs)")
     parser.add_argument("--experiments", nargs="+", default=None, help="Specific experiment IDs to run (e.g. E1 E4a E4b)")
+    parser.add_argument("--no-cache", action="store_true", help="Disable persistent disk caching")
+    parser.add_argument("--force-recompute", action="store_true", help="Force recomputation of latent features even if cache exists")
     args = parser.parse_args()
 
     run_matrix(
@@ -324,7 +359,9 @@ def main():
         runs_subfolder=args.runs_subfolder,
         seed=args.seed,
         fast_mode=args.fast,
-        selected_experiments=args.experiments
+        selected_experiments=args.experiments,
+        use_disk_cache=not args.no_cache,
+        force_recompute=args.force_recompute
     )
 
 if __name__ == "__main__":

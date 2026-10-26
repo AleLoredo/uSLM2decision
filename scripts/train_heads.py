@@ -153,7 +153,9 @@ class HeadTrainer:
         else:
             tokens = self.tokenizer.encode(state_text, add_special_tokens=False) or [1]
         hidden = self.backbone(mx.array([tokens]))
-        return hidden[:, -1, :].astype(mx.float32)
+        emb = hidden[:, -1, :].astype(mx.float32)
+        mx.eval(emb)
+        return emb
 
     def extract_features(self, split_name: str) -> Dict[str, List[Any]]:
         path = os.path.join(self.dataset_dir, f"{split_name}.jsonl")
@@ -188,9 +190,12 @@ class HeadTrainer:
                 for oid, desc in options:
                     opt_str = f"{oid}: {desc}"
                     if opt_str not in option_cache:
-                        option_cache[opt_str] = self._extract_embedding(opt_str)
+                        opt_emb = self._extract_embedding(opt_str)
+                        mx.eval(opt_emb)
+                        option_cache[opt_str] = opt_emb
                     opt_vecs.append(option_cache[opt_str])
                 e_options = mx.concatenate(opt_vecs, axis=0) # (N, d)
+                mx.eval(e_options)
                 features["choice"].append((h_q, e_options, target_idx))
             elif prim == "score":
                 criteria = q.get("criteria", [])
@@ -198,9 +203,12 @@ class HeadTrainer:
                 num_levels = len(criteria)
                 features["score"].append((h_q, num_levels, target_level))
 
+            if (idx + 1) % 100 == 0:
+                mx.metal.clear_cache()
             if (idx + 1) % 400 == 0 or (idx + 1) == len(records):
                 print(f"  Processed {idx + 1}/{len(records)} samples ({time.perf_counter() - t0:.1f}s)")
 
+        mx.metal.clear_cache()
         return features
 
     def _calc_grad_norm(self, grads: Any) -> float:
