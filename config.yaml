@@ -8,10 +8,10 @@ mode: real
 
 model:
   base_dir: ./models
-  active_model: qwen2.5-0.5b
-  backbone_path: ./models/qwen2.5-0.5b
-  heads_path: ./models/qwen2.5-0.5b/heads.safetensors
-  calibration_path: ./models/qwen2.5-0.5b/calibration.json
+  active_model: openelm-450m
+  backbone_path: ./models/openelm-450m
+  heads_path: ./models/openelm-450m/heads.safetensors
+  calibration_path: ./models/openelm-450m/calibration.json
   backend: mlx
   device: auto
 
