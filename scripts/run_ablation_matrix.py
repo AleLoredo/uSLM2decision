@@ -147,18 +147,21 @@ def format_markdown_table(results: List[Dict[str, Any]], model_name: str = "") -
     title = f"### Ablation Study: Training Methodology & Decoupled Calibration Matrix ({model_name})\n" if model_name else "### 4.9 Ablation Study: Training Methodology & Decoupled Calibration Matrix\n"
     lines = [
         title,
-        "| Experiment ID | Pipeline Configuration | Fase 2 Opt | Bool Acc (%) | Choice Acc (%) | Score Cont MAE | Score Severe (>1.5) | ECE (%) [Equal Width] | ECE (%) [Adaptive] | Brier Score |",
-        "|---|---|---|---|---|---|---|---|---|---|"
+        "| Experiment ID | Pipeline Configuration | Fase 2 Opt | Bool F1 (%) [P] | Bool Acc (%) [S] | Choice Top-1 (%) [P] | Score Cont MAE | Score Severe (>1.5) | ECE (%) [Equal Width] | ECE (%) [Adaptive] | Brier Score |",
+        "|---|---|---|---|---|---|---|---|---|---|---|"
     ]
     for r in results:
         spec = r["spec"]
         m = r["metrics"]
         opt_label = spec["phase2_optimizer"].capitalize() if spec["enable_phase2"] else "—"
+        bool_f1 = m["bool"].get("f1", m["bool"]["acc"])
+        bool_acc = m["bool"]["acc"]
+        choice_top1 = m["choice"].get("top1_acc", m["choice"]["acc"])
         score_mae = m["score"].get("mae_cont", m["score"].get("mae", 0.0))
         score_sev = m["score"]["severe_misses_pct"]
         row = (
             f"| **{spec['id']}** | {spec['pipeline_label']} | {opt_label} | "
-            f"{m['bool']['acc']:.2f} | {m['choice']['acc']:.2f} | {score_mae:.3f} | {score_sev:.2f}% | "
+            f"{bool_f1:.2f} | {bool_acc:.2f} | {choice_top1:.2f} | {score_mae:.3f} | {score_sev:.2f}% | "
             f"{m['summary']['macro_ece_equal_width']:.2f} | {m['summary']['macro_ece_adaptive']:.2f} | "
             f"{m['summary']['macro_brier']:.4f} |"
         )
@@ -327,6 +330,18 @@ def run_matrix(
     for p in table_paths:
         with open(p, "w", encoding="utf-8") as f:
             f.write(markdown_table + "\n")
+
+    # Auto-promote E5b / production checkpoint artifacts to model_dir
+    e5b_run_dir = os.path.join(runs_dir, "E5b")
+    if os.path.isdir(e5b_run_dir) and os.path.isdir(model_dir):
+        import shutil
+        print(f"\n[Ablation Suite] Auto-promoting E5b checkpoint to model directory: {model_dir}")
+        for artifact in ["heads.safetensors", "calibration.json", "heads_metadata.json"]:
+            src_path = os.path.join(e5b_run_dir, artifact)
+            dst_path = os.path.join(model_dir, artifact)
+            if os.path.exists(src_path):
+                shutil.copy2(src_path, dst_path)
+                print(f"  -> Promoted {artifact} to {dst_path}")
 
     total_time = time.perf_counter() - start_total
     print("\n================================================================================")

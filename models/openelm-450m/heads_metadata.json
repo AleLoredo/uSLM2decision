@@ -3,35 +3,26 @@
   "openjev_version": "2.0.0",
   "hidden_dim": 1536,
   "status": "trained_and_calibrated",
-  "tensors": {
-    "bool_head.linear.weight": [
-      1,
-      1536
-    ],
-    "bool_head.linear.bias": [
-      1
-    ],
-    "choice_head.w_choice.weight": [
-      1536,
-      1536
-    ],
-    "score_head.w_score.weight": [
-      5,
-      1536
-    ],
-    "score_head.w_score.bias": [
-      5
-    ]
+  "config": {
+    "phase1_loss": "ce",
+    "phase1_epochs": 60,
+    "phase1_lr": 0.001,
+    "enable_phase2": true,
+    "phase2_epochs": 30,
+    "phase2_lr": 0.0002,
+    "phase2_optimizer": "reset",
+    "skip_phase3": false,
+    "seed": 42
   },
   "calibration": {
     "version": "1.0",
     "model": "openelm-450m",
     "status": "calibrated",
     "temperatures": {
-      "bool": 0.5,
+      "bool": 0.5906,
       "choice": 1.0,
       "score": 1.0
     },
-    "timestamp": "2026-10-12T08:24:52Z"
+    "timestamp": "2026-10-26T04:14:46Z"
   }
 }

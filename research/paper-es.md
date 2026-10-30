@@ -449,7 +449,17 @@ El corpus de 1800 ejemplos se particionó en tres conjuntos disjuntos, almacenad
 
 ## 3.6 Sistema de métricas
 
-**Primitivas booleana y de elección.** Exactitud de coincidencia exacta ($\text{noul} = y^*$; $\text{choice} = y^*$).
+**Batería de Métricas de Decisión y Calibración.** Para garantizar una evaluación matemáticamente rigurosa y prevenir patologías de colapso de clase o sobreconfianza, OpenJEV formaliza:
+
+1. **Primitiva booleana (`noul` / `bool`):**
+   - **Métrica Primaria [P]: $F_1$-Score binario** (junto con macro $F_1$). Como media armónica entre precisión y exhaustividad, el $F_1$-score detecta de inmediato el colapso degenerado a una sola clase (donde un modelo que prediga todo ceros obtendría un 50.00 % engañoso en particiones balanceadas, pero exactamente 0.00 % de $F_1$).
+   - **Métrica Secundaria [S]: Exactitud de coincidencia exacta** ($\text{Acc}_{\text{bool}}$).
+2. **Primitiva de elección (`choice`):**
+   - **Métrica Primaria [P]: Exactitud Top-1 ($\text{Top-1 Acc}$)** sobre el conjunto de opciones candidatas:
+     $$\text{Top-1 Acc} = \frac{1}{N}\sum_{i=1}^N \mathbb{I}(\arg\max_k p_{ik} = y_i^*) \times 100\%$$
+     Mide el acierto de la opción de mayor probabilidad contra la verdad de terreno en conjuntos arbitrarios de candidatos.
+3. **Primitiva ordinal (`score`):**
+   - **Puntuación esperada continua** $\bar{S} = \sum k \cdot p_k$, evaluada mediante **MAE continuo** ($\text{MAE}_{\text{cont}}$) y **Fallas Severas** ($\text{TER}_{1.5}$).
 
 **Primitiva ordinal: protocolo de evaluación continua.** En la especificación normativa del sistema (`SPEC.md` §3.2), `score` no emite un entero aislado sino una distribución calibrada $\mathbf{p} = [p_0, \dots, p_{M-1}] \in \Delta^{M-1}$, de la cual se deriva analíticamente la puntuación esperada continua:
 
@@ -684,16 +694,16 @@ Para establecer la contribución individual de cada componente del ciclo de entr
 
 ### 5.4.1 Resultados sobre la partición de prueba ciega (`test.jsonl`, $N = 300$, 100 por primitiva)
 
-| ID | Configuración | Optim. F2 | Exact. Bool (%) | Exact. Choice (%) | MAE cont. Score | Severas Score ($> 1.5$) | ECE (%) [ancho igual] | ECE (%) [adaptativo] | Brier |
-|---|---|---|---|---|---|---|---|---|---|
-| **E1** | Fase 1 (CE clásica) | — | 93.00 | 79.00 | 0.432 | 2.00 % | 15.25 | 13.98 | 0.2245 |
-| **E2** | Fase 1 (CE) + Fase 3 | — | 93.00 | 79.00 | 0.432 | 2.00 % | 15.00 | 13.40 | 0.2206 |
-| **E3** | Fase 1 (Focal + Brier) | — | 94.00 | 72.00 | 0.437 | 2.00 % | 13.27 | 13.93 | 0.2417 |
-| **E4a** | Fase 1 (CE) + Fase 2 | Continuo | 96.00 | 85.00 | 0.411 | 1.00 % | 11.28 | 10.10 | 0.1635 |
-| **E4b** | Fase 1 (CE) + Fase 2 | Reinicio | 96.00 | 96.00 | **0.389** | **0.00 %** | 7.04 | 6.07 | 0.0789 |
-| **E5a** | Currículo completo (F1 + F2 + F3) | Continuo | 96.00 | 85.00 | 0.411 | 1.00 % | 10.33 | 9.27 | 0.1614 |
-| **E5b** | Currículo completo (F1 + F2 + F3) | Reinicio | **96.00** | **96.00** | **0.389** | **0.00 %** | **5.27** | **5.47** | **0.0780** |
-| **E6** | Pipeline directo (F1[FB] + F3) | — | 94.00 | 72.00 | 0.437 | 2.00 % | 12.79 | 13.41 | 0.2399 |
+| ID | Configuración | Optim. F2 | F1 Bool (%) [P] | Exact. Bool (%) [S] | Top-1 Choice (%) [P] | MAE cont. Score | Severas Score ($> 1.5$) | ECE (%) [ancho igual] | ECE (%) [adaptativo] | Brier |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **E1** | Fase 1 (CE clásica) | — | 93.33 | 93.00 | 79.00 | 0.432 | 2.00 % | 15.25 | 13.98 | 0.2245 |
+| **E2** | Fase 1 (CE) + Fase 3 | — | 93.33 | 93.00 | 79.00 | 0.432 | 2.00 % | 15.00 | 13.40 | 0.2206 |
+| **E3** | Fase 1 (Focal + Brier) | — | 93.88 | 94.00 | 72.00 | 0.437 | 2.00 % | 13.27 | 13.93 | 0.2417 |
+| **E4a** | Fase 1 (CE) + Fase 2 | Continuo | 96.08 | 96.00 | 85.00 | 0.411 | 1.00 % | 11.28 | 10.10 | 0.1635 |
+| **E4b** | Fase 1 (CE) + Fase 2 | Reinicio | 96.08 | 96.00 | 96.00 | **0.389** | **0.00 %** | 7.04 | 6.07 | 0.0789 |
+| **E5a** | Currículo completo (F1 + F2 + F3) | Continuo | 96.08 | 96.00 | 85.00 | 0.411 | 1.00 % | 10.33 | 9.27 | 0.1614 |
+| **E5b** | Currículo completo (F1 + F2 + F3) | Reinicio | **96.08** | **96.00** | **96.00** | **0.389** | **0.00 %** | **5.27** | **5.47** | **0.0780** |
+| **E6** | Pipeline directo (F1[FB] + F3) | — | 93.88 | 94.00 | 72.00 | 0.437 | 2.00 % | 12.79 | 13.41 | 0.2399 |
 
 ### 5.4.2 Análisis de la matriz desacoplada
 
@@ -722,16 +732,16 @@ Para verificar si los hallazgos de $d = 896$ se generalizan a *backbones* de may
 
 ### 5.5.1 Resultados sobre la partición de prueba ciega (`train-dataset2/test.jsonl`, $N = 300$)
 
-| ID | Configuración | Optim. F2 | Exact. Bool (%) | Exact. Choice (%) | MAE cont. Score | Severas Score ($> 1.5$) | ECE (%) [ancho igual] | ECE (%) [adaptativo] | Brier |
-|---|---|---|---|---|---|---|---|---|---|
-| **E1** | Fase 1 (CE clásica) | — | 90.00 | 74.00 | 0.411 | 0.00 % | 12.65 | 12.14 | 0.2692 |
-| **E2** | Fase 1 (CE) + Fase 3 | — | 90.00 | 74.00 | 0.411 | 0.00 % | 12.02 | 12.19 | 0.2697 |
-| **E3** | Fase 1 (Focal + Brier) | — | 50.00 | 82.00 | 0.409 | 0.00 % | 33.99 | 33.99 | 0.6551 |
-| **E4a** | Fase 1 (CE) + Fase 2 | Continuo | 91.00 | 83.00 | 0.402 | 0.00 % | 13.19 | 11.42 | 0.2177 |
-| **E4b** | Fase 1 (CE) + Fase 2 | Reinicio | 92.00 | 96.00 | 0.383 | 0.00 % | 6.60 | 5.34 | 0.1087 |
-| **E5a** | Currículo completo (F1 + F2 + F3) | Continuo | 91.00 | 83.00 | 0.402 | 0.00 % | 12.95 | 11.29 | 0.2173 |
-| **E5b** | Currículo completo (F1 + F2 + F3) | Reinicio | **92.00** | **96.00** | **0.383** | **0.00 %** | **7.34** | **5.02** | **0.1082** |
-| **E6** | Pipeline directo (F1[FB] + F3) | — | 50.00 | 82.00 | 0.409 | 0.00 % | 33.99 | 33.99 | 0.6551 |
+| ID | Configuración | Optim. F2 | F1 Bool (%) [P] | Exact. Bool (%) [S] | Top-1 Choice (%) [P] | MAE cont. Score | Severas Score ($> 1.5$) | ECE (%) [ancho igual] | ECE (%) [adaptativo] | Brier |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **E1** | Fase 1 (CE clásica) | — | 89.36 | 90.00 | 74.00 | 0.411 | 0.00 % | 12.65 | 12.14 | 0.2692 |
+| **E2** | Fase 1 (CE) + Fase 3 | — | 89.36 | 90.00 | 74.00 | 0.411 | 0.00 % | 12.02 | 12.19 | 0.2697 |
+| **E3** | Fase 1 (Focal + Brier) | — | 0.00 | 50.00 | 82.00 | 0.409 | 0.00 % | 33.99 | 33.99 | 0.6551 |
+| **E4a** | Fase 1 (CE) + Fase 2 | Continuo | 90.53 | 91.00 | 83.00 | 0.402 | 0.00 % | 13.19 | 11.42 | 0.2177 |
+| **E4b** | Fase 1 (CE) + Fase 2 | Reinicio | 91.67 | 92.00 | 96.00 | 0.383 | 0.00 % | 6.60 | 5.34 | 0.1087 |
+| **E5a** | Currículo completo (F1 + F2 + F3) | Continuo | 90.53 | 91.00 | 83.00 | 0.402 | 0.00 % | 12.95 | 11.29 | 0.2173 |
+| **E5b** | Currículo completo (F1 + F2 + F3) | Reinicio | **91.67** | **92.00** | **96.00** | **0.383** | **0.00 %** | **7.34** | **5.02** | **0.1082** |
+| **E6** | Pipeline directo (F1[FB] + F3) | — | 0.00 | 50.00 | 82.00 | 0.409 | 0.00 % | 33.99 | 33.99 | 0.6551 |
 
 ### 5.5.2 Dinámica arquitectónica y de optimización en Gemma-2-2B
 
@@ -745,16 +755,16 @@ Para probar los límites de la proyección de decisión bajo asimetría estructu
 
 ### 5.6.1 Resultados sobre la partición de prueba ciega (`train-dataset2/test.jsonl`, $N = 300$)
 
-| ID | Configuración | Optim. F2 | Exact. Bool (%) | Exact. Choice (%) | MAE cont. Score | Severas Score ($> 1.5$) | ECE (%) [ancho igual] | ECE (%) [adaptativo] | Brier |
-|---|---|---|---|---|---|---|---|---|---|
-| **E1** | Fase 1 (CE clásica) | — | 99.00 | 97.00 | 0.260 | 0.00 % | 8.01 | 8.01 | 0.0617 |
-| **E2** | Fase 1 (CE) + Fase 3 | — | 99.00 | 97.00 | 0.260 | 0.00 % | 5.97 | 5.97 | 0.0544 |
-| **E3** | Fase 1 (Focal + Brier) | — | 100.00 | 96.00 | 0.265 | 0.00 % | 9.11 | 9.11 | 0.0718 |
-| **E4a** | Fase 1 (CE) + Fase 2 | Continuo | 99.00 | 97.00 | 0.254 | 0.00 % | 6.98 | 7.44 | 0.0542 |
-| **E4b** | Fase 1 (CE) + Fase 2 | Reinicio | 100.00 | 98.00 | 0.216 | 0.00 % | 4.20 | 3.94 | 0.0306 |
-| **E5a** | Currículo completo (F1 + F2 + F3) | Continuo | 99.00 | 97.00 | 0.254 | 0.00 % | 4.72 | 5.18 | 0.0449 |
-| **E5b** | Currículo completo (F1 + F2 + F3) | Reinicio | **100.00** | **98.00** | **0.216** | **0.00 %** | **1.97** | **1.70** | **0.0233** |
-| **E6** | Pipeline directo (F1[FB] + F3) | — | 100.00 | 96.00 | 0.265 | 0.00 % | 5.35 | 5.35 | 0.0521 |
+| ID | Configuración | Optim. F2 | F1 Bool (%) [P] | Exact. Bool (%) [S] | Top-1 Choice (%) [P] | MAE cont. Score | Severas Score ($> 1.5$) | ECE (%) [ancho igual] | ECE (%) [adaptativo] | Brier |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **E1** | Fase 1 (CE clásica) | — | 99.01 | 99.00 | 97.00 | 0.260 | 0.00 % | 8.01 | 8.01 | 0.0617 |
+| **E2** | Fase 1 (CE) + Fase 3 | — | 99.01 | 99.00 | 97.00 | 0.260 | 0.00 % | 5.97 | 5.97 | 0.0544 |
+| **E3** | Fase 1 (Focal + Brier) | — | 100.00 | 100.00 | 96.00 | 0.265 | 0.00 % | 9.11 | 9.11 | 0.0718 |
+| **E4a** | Fase 1 (CE) + Fase 2 | Continuo | 99.01 | 99.00 | 97.00 | 0.254 | 0.00 % | 6.98 | 7.44 | 0.0542 |
+| **E4b** | Fase 1 (CE) + Fase 2 | Reinicio | 100.00 | 100.00 | 98.00 | 0.216 | 0.00 % | 4.20 | 3.94 | 0.0306 |
+| **E5a** | Currículo completo (F1 + F2 + F3) | Continuo | 99.01 | 99.00 | 97.00 | 0.254 | 0.00 % | 4.72 | 5.18 | 0.0449 |
+| **E5b** | Currículo completo (F1 + F2 + F3) | Reinicio | **100.00** | **100.00** | **98.00** | **0.216** | **0.00 %** | **1.97** | **1.70** | **0.0233** |
+| **E6** | Pipeline directo (F1[FB] + F3) | — | 100.00 | 100.00 | 96.00 | 0.265 | 0.00 % | 5.35 | 5.35 | 0.0521 |
 
 ### 5.6.2 Incidente metodológico: la patología del sumidero de atención y del token BOS
 
@@ -804,8 +814,9 @@ El experimento demuestra que OpenELM-450M posee una sólida capacidad de decisi�
 | Memoria pico en Metal | **~380 MB** | ~872 MB | ~1.47 GB | Apta para despliegue en el borde |
 | Tiempo de entrenamiento de la matriz (8 exp.) | **51.76 s** | 86.55 s | 286.58 s | Todas por debajo de 5 minutos gracias al caché latente |
 | **Desempeño óptimo (E5b)** | | | | |
-| Exactitud booleana | **96.00 %** | **100.00 %** | 92.00 % | Alta en todos los linajes (pico en OpenELM) |
-| Exactitud de elección | **96.00 %** | **98.00 %** | **96.00 %** | Enrutamiento sobresaliente ($\ge 96\%$) en los tres |
+| F1 de verificación booleana [P] | **96.08 %** | **100.00 %** | 91.67 % | Alto F1 en todos los linajes (pico en OpenELM) |
+| Exactitud booleana [S] | **96.00 %** | **100.00 %** | 92.00 % | Alta exactitud en todos los linajes |
+| Exactitud Top-1 de elección [P] | **96.00 %** | **98.00 %** | **96.00 %** | Enrutamiento sobresaliente ($\ge 96\%$) en los tres |
 | MAE continuo de `score` | 0.389 | **0.216** | 0.383 | OpenELM logra el mejor MAE |
 | Fallas severas de `score` ($> 1.5$) | **0.00 %** | **0.00 %** | **0.00 %** | Garantía universal de 0.00 % |
 | ECE macro (ancho igual) | 5.27 % | **1.97 %** | 7.34 % | OpenELM logra el menor ECE |
@@ -814,11 +825,11 @@ El experimento demuestra que OpenELM-450M posee una sólida capacidad de decisi�
 
 ### 5.7.2 Impacto del currículo: línea base (E1) frente al currículo recomendado (E5b)
 
-| Linaje | Bool E1 | Bool E5b | Choice E1 | Choice E5b | MAE E1 | MAE E5b | Severas E1 | Severas E5b | ECE (AI) E1 | ECE (AI) E5b | Brier E1 | Brier E5b |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Qwen 2.5-0.5B** ($d = 896$) | 93.00 % | **96.00 %** | 79.00 % | **96.00 %** | 0.432 | **0.389** | 2.00 % | **0.00 %** | 15.25 % | **5.27 %** | 0.2245 | **0.0780** |
-| **OpenELM-450M** ($d = 1536$) | 99.00 % | **100.00 %** | 97.00 % | **98.00 %** | 0.260 | **0.216** | 0.00 % | **0.00 %** | 8.01 % | **1.97 %** | 0.0617 | **0.0233** |
-| **Gemma 2 2B** ($d = 2304$) | 90.00 % | **92.00 %** | 74.00 % | **96.00 %** | 0.411 | **0.383** | 0.00 % | **0.00 %** | 12.65 % | **7.34 %** | 0.2692 | **0.1082** |
+| Linaje | F1 Bool E1 [P] | F1 Bool E5b [P] | Exact. Bool E1 [S] | Exact. Bool E5b [S] | Top-1 Choice E1 [P] | Top-1 Choice E5b [P] | MAE E1 | MAE E5b | Severas E1 | Severas E5b | ECE (AI) E1 | ECE (AI) E5b | Brier E1 | Brier E5b |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Qwen 2.5-0.5B** ($d = 896$) | 93.33 % | **96.08 %** | 93.00 % | **96.00 %** | 79.00 % | **96.00 %** | 0.432 | **0.389** | 2.00 % | **0.00 %** | 15.25 % | **5.27 %** | 0.2245 | **0.0780** |
+| **OpenELM-450M** ($d = 1536$) | 99.01 % | **100.00 %** | 99.00 % | **100.00 %** | 97.00 % | **98.00 %** | 0.260 | **0.216** | 0.00 % | **0.00 %** | 8.01 % | **1.97 %** | 0.0617 | **0.0233** |
+| **Gemma 2 2B** ($d = 2304$) | 89.36 % | **91.67 %** | 90.00 % | **92.00 %** | 74.00 % | **96.00 %** | 0.411 | **0.383** | 0.00 % | **0.00 %** | 12.65 % | **7.34 %** | 0.2692 | **0.1082** |
 
 *(AI = ancho igual.)* El currículo completo con reinicio mejora todas las métricas de calibración en los tres linajes.
 

@@ -16,12 +16,15 @@
     },
     "metrics": {
       "bool": {
+        "f1": 93.33,
+        "macro_f1": 92.98,
         "acc": 93.0,
         "ece_equal_width": 8.79,
         "ece_adaptive": 7.07,
         "brier_score": 0.1083
       },
       "choice": {
+        "top1_acc": 79.0,
         "acc": 79.0,
         "ece_equal_width": 21.71,
         "ece_adaptive": 20.89,
@@ -67,12 +70,15 @@
     },
     "metrics": {
       "bool": {
+        "f1": 93.33,
+        "macro_f1": 92.98,
         "acc": 93.0,
         "ece_equal_width": 8.29,
         "ece_adaptive": 5.9,
         "brier_score": 0.1004
       },
       "choice": {
+        "top1_acc": 79.0,
         "acc": 79.0,
         "ece_equal_width": 21.71,
         "ece_adaptive": 20.89,
@@ -118,12 +124,15 @@
     },
     "metrics": {
       "bool": {
+        "f1": 93.88,
+        "macro_f1": 94.0,
         "acc": 94.0,
         "ece_equal_width": 5.28,
         "ece_adaptive": 3.98,
         "brier_score": 0.0936
       },
       "choice": {
+        "top1_acc": 72.0,
         "acc": 72.0,
         "ece_equal_width": 21.26,
         "ece_adaptive": 23.88,
@@ -169,12 +178,15 @@
     },
     "metrics": {
       "bool": {
+        "f1": 96.08,
+        "macro_f1": 96.0,
         "acc": 96.0,
         "ece_equal_width": 7.69,
         "ece_adaptive": 5.34,
         "brier_score": 0.0899
       },
       "choice": {
+        "top1_acc": 85.0,
         "acc": 85.0,
         "ece_equal_width": 14.86,
         "ece_adaptive": 14.86,
@@ -220,12 +232,15 @@
     },
     "metrics": {
       "bool": {
+        "f1": 96.08,
+        "macro_f1": 96.0,
         "acc": 96.0,
         "ece_equal_width": 8.16,
         "ece_adaptive": 5.8,
         "brier_score": 0.0752
       },
       "choice": {
+        "top1_acc": 96.0,
         "acc": 96.0,
         "ece_equal_width": 5.92,
         "ece_adaptive": 6.34,
@@ -271,12 +286,15 @@
     },
     "metrics": {
       "bool": {
+        "f1": 96.08,
+        "macro_f1": 96.0,
         "acc": 96.0,
         "ece_equal_width": 5.8,
         "ece_adaptive": 3.67,
         "brier_score": 0.0857
       },
       "choice": {
+        "top1_acc": 85.0,
         "acc": 85.0,
         "ece_equal_width": 14.86,
         "ece_adaptive": 14.86,
@@ -322,12 +340,15 @@
     },
     "metrics": {
       "bool": {
+        "f1": 96.08,
+        "macro_f1": 96.0,
         "acc": 96.0,
         "ece_equal_width": 4.62,
         "ece_adaptive": 4.6,
         "brier_score": 0.0736
       },
       "choice": {
+        "top1_acc": 96.0,
         "acc": 96.0,
         "ece_equal_width": 5.92,
         "ece_adaptive": 6.34,
@@ -373,12 +394,15 @@
     },
     "metrics": {
       "bool": {
+        "f1": 93.88,
+        "macro_f1": 94.0,
         "acc": 94.0,
         "ece_equal_width": 4.32,
         "ece_adaptive": 2.93,
         "brier_score": 0.09
       },
       "choice": {
+        "top1_acc": 72.0,
         "acc": 72.0,
         "ece_equal_width": 21.26,
         "ece_adaptive": 23.88,

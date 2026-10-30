@@ -474,6 +474,24 @@ To eliminate discretization artifacts and align scientific measurement with the 
    - $\text{TER}_{1.0}$ (*Full-Tier Deviation*): Discrepancies exceeding an entire rubric interval ($|\bar{S} - y^*| > 1.0$).
    - $\text{TER}_{1.5}$ (**Severe Continuous Misses**): Catastrophic deviations exceeding $1.5$ rubric intervals ($|\bar{S} - y^*| > 1.5$), representing complete semantic failure (e.g., misjudging a calm request as extreme rage).
 
+### 4.1.2 Unified Decision & Calibration Metric Battery
+
+To establish rigorous, mathematically honest evaluation across all three functional primitives, OpenJEV standardizes on a multi-tiered Decision & Calibration Metric Battery:
+
+1. **Boolean Verification (`noul` / `bool`):**
+   - **Primary Metric [P]: Binary $F_1$-Score ($F_1$)** (alongside macro $F_1$). $F_1$ harmonic mean penalizes false positives and false negatives symmetrically, directly detecting single-class mode collapse (e.g., predicting all zeros or all ones), where naive accuracy deceptively reports $50.00\%$ on balanced splits.
+   - **Secondary Metric [S]: Exact Match Accuracy ($\text{Acc}_{\text{bool}}$)**.
+2. **Multi-Option Categorical Routing (`choice`):**
+   - **Primary Metric [P]: Top-1 Categorical Accuracy ($\text{Top-1 Acc}$)**:
+     $$\text{Top-1 Acc} = \frac{1}{N} \sum_{i=1}^N \mathbb{I}\left(\arg\max_k p_{ik} = y_i^*\right) \times 100\%$$
+     Measures the exact hit rate of the highest-probability option against ground truth across arbitrary candidate sets.
+3. **Ordinal Continuous Scoring (`score`):**
+   - **Primary Metrics:** **Continuous Mean Absolute Error ($\text{MAE}_{\text{cont}}$)** and **Severe Miss Rate ($\text{TER}_{1.5}$)** over the continuous expected score $\bar{S}$.
+4. **Calibration Suite (Macro across all heads):**
+   - **Equal-Width ECE ($\text{ECE}_{\text{EW}}$)**: 10 uniform probability partitions.
+   - **Adaptive Quantile ECE ($\text{ECE}_{\text{Ad}}$)**: 10 sample-balanced quantile bins.
+   - **Strictly Proper Brier Score ($\text{BS}$)**: Mean squared probability error.
+
 ---
 
 ### 4.2 Training Dynamics and Convergence Metrics (Validation Partition)
@@ -759,16 +777,16 @@ The eight experimental configurations decouple every pairwise combination of the
 
 #### 4.9.3 Empirical Ablation Results on Blind Test Split (`test.jsonl`, $N=300$, 100 per primitive):
 
-| Experiment ID | Pipeline Configuration | Fase 2 Opt | Bool Acc (%) | Choice Acc (%) | Score Cont MAE | Score Severe (>1.5) | ECE (%) [Equal Width] | ECE (%) [Adaptive] | Brier Score |
-|---|---|---|---|---|---|---|---|---|---|
-| **E1** | Phase 1 (Classical CE) | — | 93.00 | 79.00 | 0.432 | 2.00% | 15.25 | 13.98 | 0.2245 |
-| **E2** | Phase 1 (CE) + Phase 3 (Post-Hoc T) | — | 93.00 | 79.00 | 0.432 | 2.00% | 15.00 | 13.40 | 0.2206 |
-| **E3** | Phase 1 (Focal + Brier) | — | 94.00 | 72.00 | 0.437 | 2.00% | 13.27 | 13.93 | 0.2417 |
-| **E4a** | Phase 1 (CE) + Phase 2 (Refinement) | Continuous | 96.00 | 85.00 | 0.411 | 1.00% | 11.28 | 10.10 | 0.1635 |
-| **E4b** | Phase 1 (CE) + Phase 2 (Refinement) | Reset | 96.00 | 96.00 | **0.389** | **0.00%** | 7.04 | 6.07 | 0.0789 |
-| **E5a** | Full Curriculum (P1 + P2 + P3) | Continuous | 96.00 | 85.00 | 0.411 | 1.00% | 10.33 | 9.27 | 0.1614 |
-| **E5b** | Full Curriculum (P1 + P2 + P3) | Reset | **96.00** | **96.00** | **0.389** | **0.00%** | **5.27** | **5.47** | **0.0780** |
-| **E6** | Direct Pipeline (P1[FB] + P3) | — | 94.00 | 72.00 | 0.437 | 2.00% | 12.79 | 13.41 | 0.2399 |
+| Experiment ID | Pipeline Configuration | Fase 2 Opt | Bool F1 (%) [P] | Bool Acc (%) [S] | Choice Top-1 (%) [P] | Score Cont MAE | Score Severe (>1.5) | ECE (%) [Equal Width] | ECE (%) [Adaptive] | Brier Score |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **E1** | Phase 1 (Classical CE) | — | 93.33 | 93.00 | 79.00 | 0.432 | 2.00% | 15.25 | 13.98 | 0.2245 |
+| **E2** | Phase 1 (CE) + Phase 3 (Post-Hoc T) | — | 93.33 | 93.00 | 79.00 | 0.432 | 2.00% | 15.00 | 13.40 | 0.2206 |
+| **E3** | Phase 1 (Focal + Brier) | — | 93.88 | 94.00 | 72.00 | 0.437 | 2.00% | 13.27 | 13.93 | 0.2417 |
+| **E4a** | Phase 1 (CE) + Phase 2 (Refinement) | Continuous | 96.08 | 96.00 | 85.00 | 0.411 | 1.00% | 11.28 | 10.10 | 0.1635 |
+| **E4b** | Phase 1 (CE) + Phase 2 (Refinement) | Reset | 96.08 | 96.00 | 96.00 | **0.389** | **0.00%** | 7.04 | 6.07 | 0.0789 |
+| **E5a** | Full Curriculum (P1 + P2 + P3) | Continuous | 96.08 | 96.00 | 85.00 | 0.411 | 1.00% | 10.33 | 9.27 | 0.1614 |
+| **E5b** | Full Curriculum (P1 + P2 + P3) | Reset | **96.08** | **96.00** | **96.00** | **0.389** | **0.00%** | **5.27** | **5.47** | **0.0780** |
+| **E6** | Direct Pipeline (P1[FB] + P3) | — | 93.88 | 94.00 | 72.00 | 0.437 | 2.00% | 12.79 | 13.41 | 0.2399 |
 
 #### Analytical Insights from the Decoupled Matrix:
 
@@ -815,16 +833,16 @@ To verify whether the findings from the $d=896$ ablation generalize to higher-di
 
 #### 4.10.1 Empirical Ablation Results on Blind Test Split (`train-dataset2/test.jsonl`, $N=300$):
 
-| Experiment ID | Pipeline Configuration | Fase 2 Opt | Bool Acc (%) | Choice Acc (%) | Score Cont MAE | Score Severe (>1.5) | ECE (%) [Equal Width] | ECE (%) [Adaptive] | Brier Score |
-|---|---|---|---|---|---|---|---|---|---|
-| **E1** | Phase 1 (Classical CE) | — | 90.00 | 74.00 | 0.411 | 0.00% | 12.65 | 12.14 | 0.2692 |
-| **E2** | Phase 1 (CE) + Phase 3 (Post-Hoc T) | — | 90.00 | 74.00 | 0.411 | 0.00% | 12.02 | 12.19 | 0.2697 |
-| **E3** | Phase 1 (Focal + Brier) | — | 50.00 | 82.00 | 0.409 | 0.00% | 33.99 | 33.99 | 0.6551 |
-| **E4a** | Phase 1 (CE) + Phase 2 (Refinement) | Continuous | 91.00 | 83.00 | 0.402 | 0.00% | 13.19 | 11.42 | 0.2177 |
-| **E4b** | Phase 1 (CE) + Phase 2 (Refinement) | Reset | 92.00 | 96.00 | 0.383 | 0.00% | 6.60 | 5.34 | 0.1087 |
-| **E5a** | Full Curriculum (P1 + P2 + P3) | Continuous | 91.00 | 83.00 | 0.402 | 0.00% | 12.95 | 11.29 | 0.2173 |
-| **E5b** | Full Curriculum (P1 + P2 + P3) | Reset | **92.00** | **96.00** | **0.383** | **0.00%** | **7.34** | **5.02** | **0.1082** |
-| **E6** | Direct Pipeline (P1[FB] + P3) | — | 50.00 | 82.00 | 0.409 | 0.00% | 33.99 | 33.99 | 0.6551 |
+| Experiment ID | Pipeline Configuration | Fase 2 Opt | Bool F1 (%) [P] | Bool Acc (%) [S] | Choice Top-1 (%) [P] | Score Cont MAE | Score Severe (>1.5) | ECE (%) [Equal Width] | ECE (%) [Adaptive] | Brier Score |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **E1** | Phase 1 (Classical CE) | — | 89.36 | 90.00 | 74.00 | 0.411 | 0.00% | 12.65 | 12.14 | 0.2692 |
+| **E2** | Phase 1 (CE) + Phase 3 (Post-Hoc T) | — | 89.36 | 90.00 | 74.00 | 0.411 | 0.00% | 12.02 | 12.19 | 0.2697 |
+| **E3** | Phase 1 (Focal + Brier) | — | 0.00 | 50.00 | 82.00 | 0.409 | 0.00% | 33.99 | 33.99 | 0.6551 |
+| **E4a** | Phase 1 (CE) + Phase 2 (Refinement) | Continuous | 90.53 | 91.00 | 83.00 | 0.402 | 0.00% | 13.19 | 11.42 | 0.2177 |
+| **E4b** | Phase 1 (CE) + Phase 2 (Refinement) | Reset | 91.67 | 92.00 | 96.00 | 0.383 | 0.00% | 6.60 | 5.34 | 0.1087 |
+| **E5a** | Full Curriculum (P1 + P2 + P3) | Continuous | 90.53 | 91.00 | 83.00 | 0.402 | 0.00% | 12.95 | 11.29 | 0.2173 |
+| **E5b** | Full Curriculum (P1 + P2 + P3) | Reset | **91.67** | **92.00** | **96.00** | **0.383** | **0.00%** | **7.34** | **5.02** | **0.1082** |
+| **E6** | Direct Pipeline (P1[FB] + P3) | — | 0.00 | 50.00 | 82.00 | 0.409 | 0.00% | 33.99 | 33.99 | 0.6551 |
 
 #### 4.10.2 Architectural and Optimization Dynamics in Gemma-2-2B:
 
@@ -850,16 +868,16 @@ To test the boundaries of System 1 decision projection under extreme structural 
 
 #### 4.11.1 Empirical Ablation Results on Blind Test Split (`train-dataset2/test.jsonl`, $N=300$):
 
-| Experiment ID | Pipeline Configuration | Fase 2 Opt | Bool Acc (%) | Choice Acc (%) | Score Cont MAE | Score Severe (>1.5) | ECE (%) [Equal Width] | ECE (%) [Adaptive] | Brier Score |
-|---|---|---|---|---|---|---|---|---|---|
-| **E1** | Phase 1 (Classical CE) | — | 99.00 | 97.00 | 0.260 | 0.00% | 8.01 | 8.01 | 0.0617 |
-| **E2** | Phase 1 (CE) + Phase 3 (Post-Hoc T) | — | 99.00 | 97.00 | 0.260 | 0.00% | 5.97 | 5.97 | 0.0544 |
-| **E3** | Phase 1 (Focal + Brier) | — | 100.00 | 96.00 | 0.265 | 0.00% | 9.11 | 9.11 | 0.0718 |
-| **E4a** | Phase 1 (CE) + Phase 2 (Refinement) | Continuous | 99.00 | 97.00 | 0.254 | 0.00% | 6.98 | 7.44 | 0.0542 |
-| **E4b** | Phase 1 (CE) + Phase 2 (Refinement) | Reset | 100.00 | 98.00 | 0.216 | 0.00% | 4.20 | 3.94 | 0.0306 |
-| **E5a** | Full Curriculum (P1 + P2 + P3) | Continuous | 99.00 | 97.00 | 0.254 | 0.00% | 4.72 | 5.18 | 0.0449 |
-| **E5b** | Full Curriculum (P1 + P2 + P3) | Reset | **100.00** | **98.00** | **0.216** | **0.00%** | **1.97** | **1.70** | **0.0233** |
-| **E6** | Direct Pipeline (P1[FB] + P3) | — | 100.00 | 96.00 | 0.265 | 0.00% | 5.35 | 5.35 | 0.0521 |
+| Experiment ID | Pipeline Configuration | Fase 2 Opt | Bool F1 (%) [P] | Bool Acc (%) [S] | Choice Top-1 (%) [P] | Score Cont MAE | Score Severe (>1.5) | ECE (%) [Equal Width] | ECE (%) [Adaptive] | Brier Score |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **E1** | Phase 1 (Classical CE) | — | 99.01 | 99.00 | 97.00 | 0.260 | 0.00% | 8.01 | 8.01 | 0.0617 |
+| **E2** | Phase 1 (CE) + Phase 3 (Post-Hoc T) | — | 99.01 | 99.00 | 97.00 | 0.260 | 0.00% | 5.97 | 5.97 | 0.0544 |
+| **E3** | Phase 1 (Focal + Brier) | — | 100.00 | 100.00 | 96.00 | 0.265 | 0.00% | 9.11 | 9.11 | 0.0718 |
+| **E4a** | Phase 1 (CE) + Phase 2 (Refinement) | Continuous | 99.01 | 99.00 | 97.00 | 0.254 | 0.00% | 6.98 | 7.44 | 0.0542 |
+| **E4b** | Phase 1 (CE) + Phase 2 (Refinement) | Reset | 100.00 | 100.00 | 98.00 | 0.216 | 0.00% | 4.20 | 3.94 | 0.0306 |
+| **E5a** | Full Curriculum (P1 + P2 + P3) | Continuous | 99.01 | 99.00 | 97.00 | 0.254 | 0.00% | 4.72 | 5.18 | 0.0449 |
+| **E5b** | Full Curriculum (P1 + P2 + P3) | Reset | **100.00** | **100.00** | **98.00** | **0.216** | **0.00%** | **1.97** | **1.70** | **0.0233** |
+| **E6** | Direct Pipeline (P1[FB] + P3) | — | 100.00 | 100.00 | 96.00 | 0.265 | 0.00% | 5.35 | 5.35 | 0.0521 |
 
 #### 4.11.2 Initial Pipeline Execution, Anomaly Detection, and the Attention Sink / BOS Anchor Pathology
 
@@ -932,8 +950,9 @@ The following triangular synthesis compares the optimal production curriculum (*
 | Peak Metal VRAM Footprint | **~380 MB** | ~872 MB | ~1.47 GB | Suitable for constrained edge deployment |
 | Matrix Training Time (8 Exps) | **51.76 s** | 86.55 s | 286.58 s | All sub-5 minutes via latent cache |
 | **Optimal Production Performance (E5b)** | | | | |
-| Boolean Verification Accuracy | **96.00%** | **100.00%** | 92.00% | High accuracy across all lineages (OpenELM peak) |
-| Multi-Option Choice Accuracy | **96.00%** | **98.00%** | **96.00%** | Outstanding routing across all 3 lineages ($\ge 96\%$) |
+| Boolean Verification F1 Score [P] | **96.08%** | **100.00%** | 91.67% | High F1 across all lineages (OpenELM peak) |
+| Boolean Exact Match Accuracy [S] | **96.00%** | **100.00%** | 92.00% | High accuracy across all lineages (OpenELM peak) |
+| Multi-Option Choice Top-1 Accuracy [P] | **96.00%** | **98.00%** | **96.00%** | Outstanding routing across all 3 lineages ($\ge 96\%$) |
 | Score Continuous MAE ($|\bar{S} - y^*|$) | 0.389 | **0.216** | 0.383 | **OpenELM achieves best continuous MAE (0.216)** |
 | Score Severe Misses ($|\bar{S} - y^*| > 1.5$) | **0.00%** | **0.00%** | **0.00%** | **Universal 0.00% safety guarantee across all lineages** |
 | Macro ECE (Equal-Width) | 5.27% | **1.97%** | 7.34% | **OpenELM achieves lowest ECE (1.97%)** |
@@ -944,11 +963,11 @@ The following triangular synthesis compares the optimal production curriculum (*
 
 To isolate the causal benefit of the Calibrated Decision Tuning curriculum across architectures, the table below contrasts the raw uncalibrated Cross-Entropy baseline (**E1**) against the full 3-phase curriculum with optimizer reset (**E5b**):
 
-| Architecture Lineage | E1 Bool Acc | E5b Bool Acc | E1 Choice Acc | E5b Choice Acc | E1 Score MAE | E5b Score MAE | E1 Severe Misses | E5b Severe Misses | E1 Macro ECE (EW) | E5b Macro ECE (EW) | E1 Brier Score | E5b Brier Score |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Qwen 2.5-0.5B** ($d=896$) | 93.00% | **96.00%** | 79.00% | **96.00%** | 0.432 | **0.389** | 2.00% | **0.00%** | 15.25% | **5.27%** | 0.2245 | **0.0780** |
-| **OpenELM-450M** ($d=1536$) | 99.00% | **100.00%** | 97.00% | **98.00%** | 0.260 | **0.216** | 0.00% | **0.00%** | 8.01% | **1.97%** | 0.0617 | **0.0233** |
-| **Gemma 2 2B** ($d=2304$) | 90.00% | **92.00%** | 74.00% | **96.00%** | 0.411 | **0.383** | 0.00% | **0.00%** | 12.65% | **7.34%** | 0.2692 | **0.1082** |
+| Architecture Lineage | E1 Bool F1 [P] | E5b Bool F1 [P] | E1 Bool Acc [S] | E5b Bool Acc [S] | E1 Choice Top-1 [P] | E5b Choice Top-1 [P] | E1 Score MAE | E5b Score MAE | E1 Severe Misses | E5b Severe Misses | E1 Macro ECE (EW) | E5b Macro ECE (EW) | E1 Brier Score | E5b Brier Score |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Qwen 2.5-0.5B** ($d=896$) | 93.33% | **96.08%** | 93.00% | **96.00%** | 79.00% | **96.00%** | 0.432 | **0.389** | 2.00% | **0.00%** | 15.25% | **5.27%** | 0.2245 | **0.0780** |
+| **OpenELM-450M** ($d=1536$) | 99.01% | **100.00%** | 99.00% | **100.00%** | 97.00% | **98.00%** | 0.260 | **0.216** | 0.00% | **0.00%** | 8.01% | **1.97%** | 0.0617 | **0.0233** |
+| **Gemma 2 2B** ($d=2304$) | 89.36% | **91.67%** | 90.00% | **92.00%** | 74.00% | **96.00%** | 0.411 | **0.383** | 0.00% | **0.00%** | 12.65% | **7.34%** | 0.2692 | **0.1082** |
 
 #### 4.12.3 Cross-Architectural Theoretical Synthesis:
 

@@ -3,9 +3,9 @@
   "model": "openelm-450m",
   "status": "calibrated",
   "temperatures": {
-    "bool": 0.5,
+    "bool": 0.5906,
     "choice": 1.0,
     "score": 1.0
   },
-  "timestamp": "2026-10-12T08:24:52Z"
+  "timestamp": "2026-10-26T04:14:46Z"
 }

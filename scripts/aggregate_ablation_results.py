@@ -86,8 +86,8 @@ def build_triangular_comparison(summaries: Dict[str, List[Dict[str, Any]]]) -> s
         "### 4.12 Cross-Architectural Triangular Synthesis & Efficiency Comparison\n",
         "A consolidated evaluation across the three distinct model lineages under identical blind test splits (`train-dataset2/test.jsonl`, $N=300$).",
         "This table compares the optimal production curriculum (**E5b: Full 3-Phase Suite with Optimizer Reset**) across all architectures:\n",
-        "| Architecture Lineage | Parameter Scale | Hidden Dim ($d$) | Layers ($L$) | Bool Acc (%) | Choice Acc (%) | Score Cont. MAE | Score Severe Misses | Macro ECE (EW %) | Macro ECE (Ad %) | Macro Brier Score |",
-        "|---|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|"
+        "| Architecture Lineage | Parameter Scale | Hidden Dim ($d$) | Layers ($L$) | Bool F1 (%) [P] | Bool Acc (%) [S] | Choice Top-1 (%) [P] | Score Cont. MAE | Score Severe Misses | Macro ECE (EW %) | Macro ECE (Ad %) | Macro Brier Score |",
+        "|---|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|"
     ]
 
     canonical_order = ["qwen2.5-0.5b", "openelm-450m", "gemma-2-2b"]
@@ -108,20 +108,23 @@ def build_triangular_comparison(summaries: Dict[str, List[Dict[str, Any]]]) -> s
             "hidden_dim": get_model_hidden_size(f"./models/{m_name}")
         })
 
+        bool_f1 = m["bool"].get("f1", m["bool"]["acc"])
+        bool_acc = m["bool"]["acc"]
+        choice_top1 = m["choice"].get("top1_acc", m["choice"]["acc"])
         score_mae = m["score"].get("mae_cont", m["score"].get("mae", 0.0))
         score_sev = m["score"].get("severe_misses_pct", 0.0)
 
         row = (
             f"| **{meta['display_name']}** | {meta['params']} | {meta['hidden_dim']} | {meta['layers']} | "
-            f"**{m['bool']['acc']:.2f}%** | **{m['choice']['acc']:.2f}%** | **{score_mae:.3f}** | "
+            f"**{bool_f1:.2f}%** | {bool_acc:.2f}% | **{choice_top1:.2f}%** | **{score_mae:.3f}** | "
             f"**{score_sev:.2f}%** | {m['summary']['macro_ece_equal_width']:.2f}% | "
             f"{m['summary']['macro_ece_adaptive']:.2f}% | **{m['summary']['macro_brier']:.4f}** |"
         )
         lines.append(row)
 
     lines.append("\n#### Curriculum Impact: Uncalibrated Baseline (E1) vs Recommended Curriculum (E5b)\n")
-    lines.append("| Architecture Lineage | E1 Bool Acc | E5b Bool Acc | E1 Choice Acc | E5b Choice Acc | E1 Score MAE | E5b Score MAE | E1 Macro ECE | E5b Macro ECE | E1 Brier | E5b Brier |")
-    lines.append("|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|")
+    lines.append("| Architecture Lineage | E1 Bool F1 [P] | E5b Bool F1 [P] | E1 Bool Acc [S] | E5b Bool Acc [S] | E1 Choice Top-1 [P] | E5b Choice Top-1 [P] | E1 Score MAE | E5b Score MAE | E1 Macro ECE | E5b Macro ECE | E1 Brier | E5b Brier |")
+    lines.append("|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|")
 
     for m_name in all_models:
         exps = {r["spec"]["id"]: r for r in summaries[m_name]}
@@ -132,11 +135,18 @@ def build_triangular_comparison(summaries: Dict[str, List[Dict[str, Any]]]) -> s
         if e1 and e5b:
             m1 = e1["metrics"]
             m5 = e5b["metrics"]
+            b1_f1 = m1["bool"].get("f1", m1["bool"]["acc"])
+            b5_f1 = m5["bool"].get("f1", m5["bool"]["acc"])
+            b1_acc = m1["bool"]["acc"]
+            b5_acc = m5["bool"]["acc"]
+            c1_top1 = m1["choice"].get("top1_acc", m1["choice"]["acc"])
+            c5_top1 = m5["choice"].get("top1_acc", m5["choice"]["acc"])
             s1_mae = m1["score"].get("mae_cont", m1["score"].get("mae", 0.0))
             s5_mae = m5["score"].get("mae_cont", m5["score"].get("mae", 0.0))
             row = (
-                f"| **{meta['display_name']}** | {m1['bool']['acc']:.2f}% | **{m5['bool']['acc']:.2f}%** | "
-                f"{m1['choice']['acc']:.2f}% | **{m5['choice']['acc']:.2f}%** | {s1_mae:.3f} | **{s5_mae:.3f}** | "
+                f"| **{meta['display_name']}** | {b1_f1:.2f}% | **{b5_f1:.2f}%** | "
+                f"{b1_acc:.2f}% | **{b5_acc:.2f}%** | "
+                f"{c1_top1:.2f}% | **{c5_top1:.2f}%** | {s1_mae:.3f} | **{s5_mae:.3f}** | "
                 f"{m1['summary']['macro_ece_equal_width']:.2f}% | **{m5['summary']['macro_ece_equal_width']:.2f}%** | "
                 f"{m1['summary']['macro_brier']:.4f} | **{m5['summary']['macro_brier']:.4f}** |"
             )

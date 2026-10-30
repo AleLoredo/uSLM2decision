@@ -24,6 +24,7 @@ import mlx.nn as nn
 import mlx.optimizers as optim
 import mlx.utils as utils
 from safetensors.numpy import save_file
+from sklearn.metrics import f1_score
 
 from core.heads import BoolHead, ChoiceHead, ScoreHead
 from core.losses import (
@@ -494,7 +495,16 @@ class HeadTrainer:
             bool_probs.append(p_calib)
             bool_targets.append(float(target))
 
-        bool_acc = np.mean(np.array(bool_preds) == np.array(bool_targets)) if bool_samples else 1.0
+        if bool_samples:
+            bool_targets_arr = np.array(bool_targets, dtype=int)
+            bool_preds_arr = np.array(bool_preds, dtype=int)
+            bool_acc = float(np.mean(bool_preds_arr == bool_targets_arr))
+            bool_f1 = float(f1_score(bool_targets_arr, bool_preds_arr, average="binary", zero_division=0))
+            bool_macro_f1 = float(f1_score(bool_targets_arr, bool_preds_arr, average="macro", zero_division=0))
+        else:
+            bool_acc = 1.0
+            bool_f1 = 1.0
+            bool_macro_f1 = 1.0
         bool_ece_ew = compute_ece(np.array(bool_probs), np.array(bool_targets), scheme="equal_width")["ece"]
         bool_ece_ad = compute_ece(np.array(bool_probs), np.array(bool_targets), scheme="adaptive")["ece"]
         bool_brier = compute_brier_decomposition(np.array(bool_probs), np.array(bool_targets))["brier_score"]
@@ -560,12 +570,15 @@ class HeadTrainer:
 
         return {
             "bool": {
+                "f1": round(float(bool_f1 * 100), 2),
+                "macro_f1": round(float(bool_macro_f1 * 100), 2),
                 "acc": round(float(bool_acc * 100), 2),
                 "ece_equal_width": round(float(bool_ece_ew * 100), 2),
                 "ece_adaptive": round(float(bool_ece_ad * 100), 2),
                 "brier_score": round(float(bool_brier), 4),
             },
             "choice": {
+                "top1_acc": round(float(choice_acc * 100), 2),
                 "acc": round(float(choice_acc * 100), 2),
                 "ece_equal_width": round(float(choice_ece_ew * 100), 2),
                 "ece_adaptive": round(float(choice_ece_ad * 100), 2),

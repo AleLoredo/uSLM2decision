@@ -3,9 +3,9 @@
   "model": "gemma-2-2b",
   "status": "calibrated",
   "temperatures": {
-    "bool": 0.5,
+    "bool": 0.7718,
     "choice": 1.0,
     "score": 1.0
   },
-  "timestamp": "2026-10-12T03:17:23Z"
+  "timestamp": "2026-10-25T07:18:00Z"
 }
