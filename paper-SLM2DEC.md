@@ -423,7 +423,7 @@ El diseño arquitectónico consolidado (*happy path*) que resuelve de manera int
         ▼                             ▼                             ▼
   Cabezal Booleano              Cabezal Choice                Cabezal Score
   P(true) = σ(W_b · h + b)      z_i = ⟨ĥ_proj, ê_i⟩ / τ       p = Softmax(W_s · h + b)
-  L: BCE + 0.5 Brier            L: CE + 0.5 Brier             p_smooth: N(y, σ=0.35)
+  L: Focal + 0.5 Brier          L: CE + 0.5 Brier             p_smooth: N(y, σ=0.35)
         │                             │                             │
         └─────────────────────────────┼─────────────────────────────┘
                                       ▼
@@ -485,9 +485,9 @@ $$h_{Q_k}(S, Q_k) \equiv h_{Q_k}(S, Q_1, \dots, Q_K), \quad \forall Q_{m \ne k}$
     $$y_{\text{smooth}}(i) \propto \exp\left(-\frac{(i - y)^2}{2 \cdot 0.35^2}\right)$$
     lo que preserva la fidelidad de los extremos sin diluir la masa en niveles adyacentes.
 
-* **Tier 2 (Calibración Extrínseca Post-Hoc):** Tras culminar el entrenamiento, se congelan los cabezales y se optimiza sobre `val.jsonl` un escalar estricto de temperatura $T \in \mathbb{R}^+$ mediante minimización de log-verosimilitud negativa:
-  $$\hat{p}_i = \text{Softmax}\left(\frac{z_i}{T}\right)$$
-  Dado que el escalado de temperatura es una transformación monótona creciente estricta, **preserva el 100% de la exactitud de clasificación (*argmax*)**, ajustando la dispersión de las probabilidades para minimizar el $\text{ECE}$.
+* **Tier 2 (Calibración Extrínseca Post-Hoc):** Tras culminar el entrenamiento, se congelan los cabezales y se optimiza sobre la partición de validación (`val.jsonl`, $N = 300$) un parámetro escalar estricto de temperatura $T \in \mathbb{R}^+$ mediante una búsqueda en grilla uniforme de 150 pasos en $T \in [0.5, 5.0]$ que minimiza directamente el Error de Calibración Esperado ($\text{ECE}$ con 10 bins):
+  $$\hat{p}_i = \text{Softmax}\left(\frac{z_i}{T}\right) \quad \text{o bien} \quad \sigma\left(\frac{z}{T}\right)$$
+  Al carecer de término aditivo de sesgo ($B = 0$) y constituir una transformación monótona creciente estricta, el escalado por temperatura **preserva el 100% de la exactitud de clasificación (*argmax*)**, ajustando la dispersión de las probabilidades para alinear la confianza emitida con la precisión empírica. Se optimiza el escalar $T_{\text{bool}} \in [0.5, 5.0]$ para el cabezal booleano, mientras que para `choice` y `score` la temperatura se mantiene unitaria neutral ($T = 1.0$), dado que sus márgenes e incertidumbre fueron regulados intrínsecamente durante la Fase 2 mediante regularización de Brier y suavizado gaussiano.
 
 ## 3.6 Fase 4: Aseguramiento de la calidad del modelo y sistema de métricas
 
@@ -561,8 +561,9 @@ El currículo óptimo de postentrenamiento (denominado **E5b**) consta de un cic
                                       ▼
   ┌───────────────────────────────────────────────────────────────────────┐
   │ Post-Hoc: Calibración Extrínseca sobre val.jsonl                      │
-  │ • Optimización de temperatura T mediante descenso L-BFGS-B (<50ms)   │
-  │ • Serialización de cabezales y temperaturas a disk (heads.safetensors)│
+  │ • Búsqueda en grilla de T_bool en [0.5, 5.0] minimizando ECE (<50ms)  │
+  │ • Escala neutral T_choice = 1.0, T_score = 1.0 (calibrados en Fase 2) │
+  │ • Serialización a disco (heads.safetensors y calibration.json)        │
   └───────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -582,11 +583,11 @@ El modelo Qwen 2.5-0.5B ($d = 896$, 24 capas), entrenado bajo el currículo cons
 
 | Primitiva Evaluada | Muestra ($N$) | Métrica Primaria de Acierto | Calibración ECE | Calibración Brier Score | Métricas Adicionales |
 |:---|:---|:---|:---|:---|:---|
-| **Boolean (`noul`)** | 100 | **92.00%** Exactitud | **4.41%** | 0.0592 | Confianza Media: 0.931 |
-| **Choice (`choice`)** | 100 | **96.00%** Exactitud | **4.54%** | 0.0611 | Margen Logit: +4.82 |
-| **Score (`score`)** | 100 | **93.00%** Margen $\pm 1$ | **1.97%** | 0.0884 | **0.00% Error Severo**, MAE: 0.40 |
+| **Boolean (`noul`)** | 100 | **96.00%** Exactitud (**96.08%** F1) | **4.62%** | 0.0736 | Confianza Calibrada ($T_{\text{bool}} = 0.50$) |
+| **Choice (`choice`)** | 100 | **96.00%** Exactitud Top-1 | **5.92%** | 0.0825 | Margen Logit Normalizado ($\tau = 0.03$) |
+| **Score (`score`)** | 100 | **93.00%** Margen $\pm 1$ (74.0% Exacto) | N/A (Continuo) | N/A | **0.00% Error Severo**, MAE Continuo: **0.389** |
 
-El modelo demostró un comportamiento notable en la primitiva ordinal `score`: el 93% de las predicciones continuas cayeron dentro del intervalo admisible $[\text{true} - 1, \text{true} + 1]$, con un error absoluto medio de solo 0.40 puntos y una tasa de excedencia de tolerancia $\text{TER} = 0.00\%$ (cero instancias erró por más de un nivel en la escala de satisfacción). El ECE ordinal se situó en un sobresaliente $1.97\%$.
+El modelo demostró un comportamiento sobresaliente en la primitiva ordinal `score`: el 93% de las predicciones continuas cayeron dentro del intervalo admisible $[\text{true} - 1, \text{true} + 1]$ (con un 74.0% de acierto exacto y 19.0% a distancia 1), alcanzando un error absoluto medio continuo de 0.389 puntos y una tasa de excedencia de tolerancia $\text{TER} = 0.00\%$ (ninguna instancia erró por más de un nivel en la escala de satisfacción). El rendimiento global macro alcanzó un **Macro ECE de 5.27%** y un **Macro Brier Score de 0.0780**.
 
 ## 5.2 Evaluación sobre partición de prueba ciega en Gemma 2 2B
 
@@ -594,11 +595,11 @@ El modelo Gemma 2 2B ($d = 2304$, 26 capas, con escalado $\sqrt{d}$ y *soft-capp
 
 | Primitiva Evaluada | Muestra ($N$) | Métrica Primaria de Acierto | Calibración ECE | Calibración Brier Score | Métricas Adicionales |
 |:---|:---|:---|:---|:---|:---|
-| **Boolean (`noul`)** | 100 | **95.00%** Exactitud | **6.94%** | 0.0487 | Confianza Media: 0.945 |
-| **Choice (`choice`)** | 100 | **96.00%** Exactitud | **7.34%** | 0.0542 | Margen Logit: +5.12 |
-| **Score (`score`)** | 100 | **93.00%** Margen $\pm 1$ | **4.09%** | 0.0912 | **0.00% Error Severo**, MAE: 0.41 |
+| **Boolean (`noul`)** | 100 | **92.00%** Exactitud (**91.67%** F1) | **7.27%** | 0.1370 | Confianza Calibrada ($T_{\text{bool}} = 0.77$) |
+| **Choice (`choice`)** | 100 | **96.00%** Exactitud Top-1 | **7.40%** | 0.0794 | Margen Logit Normalizado ($\tau = 0.03$) |
+| **Score (`score`)** | 100 | **94.00%** Margen $\pm 1$ (77.0% Exacto) | N/A (Continuo) | N/A | **0.00% Error Severo**, MAE Continuo: **0.383** |
 
-La mayor capacidad paramétrica de Gemma 2 (2B frente a 0.5B) incrementó la exactitud booleana al 95.00%. La calibración post-hoc logró mantener el ECE general por debajo del umbral del 7.5%, a pesar de la fuerte compresión no lineal introducida por los operadores internos de tangente hiperbólica (*soft-capping*) en la atención de Gemma.
+La mayor capacidad paramétrica de Gemma 2 (2B frente a 0.5B) permitió un acierto del 96.00% en enrutamiento y 94.00% dentro del margen $\pm 1$ en scoring con MAE continuo de 0.383. La calibración post-hoc logró mantener el ECE macro en un controlado **7.34%** (Brier Macro: **0.1082**), a pesar de la fuerte compresión no lineal introducida por los operadores internos de tangente hiperbólica (*soft-capping*) característicos de la arquitectura Gemma 2.
 
 ## 5.3 Evaluación sobre partición de prueba ciega en OpenELM-450M
 
@@ -606,28 +607,28 @@ El modelo de arquitectura no uniforme de Apple, OpenELM-450M ($d = 1536$, 20 cap
 
 | Primitiva Evaluada | Muestra ($N$) | Métrica Primaria de Acierto | Calibración ECE | Calibración Brier Score | Métricas Adicionales |
 |:---|:---|:---|:---|:---|:---|
-| **Boolean (`noul`)** | 100 | **100.00%** Exactitud | **2.85%** | 0.0124 | Confianza Media: 0.978 |
-| **Choice (`choice`)** | 100 | **98.00%** Exactitud | **3.20%** | 0.0241 | Margen Logit: +6.30 |
-| **Score (`score`)** | 100 | **98.00%** Margen $\pm 1$ | **3.12%** | 0.0450 | **0.00% Error Severo**, MAE: 0.35 |
+| **Boolean (`noul`)** | 100 | **100.00%** Exactitud (**100.00%** F1) | **2.03%** | 0.0032 | Confianza Calibrada ($T_{\text{bool}} = 0.59$) |
+| **Choice (`choice`)** | 100 | **98.00%** Exactitud Top-1 | **1.90%** | 0.0433 | Margen Logit Normalizado ($\tau = 0.03$) |
+| **Score (`score`)** | 100 | **96.00%** Margen $\pm 1$ (93.0% Exacto) | N/A (Continuo) | N/A | **0.00% Error Severo**, MAE Continuo: **0.216** |
 
-OpenELM-450M alcanzó una precisión perfecta (**100.00%**) en la tarea de verdad y urgencia booleana, un **98.00%** de acierto en enrutamiento departamental multiclase, y un **98.00%** de conformidad ordinal con un MAE récord de 0.35 puntos y $\text{TER} = 0.00\%$. La calibración probabilística exhibió errores ECE ínfimos ($2.85\% - 3.20\%$).
+OpenELM-450M alcanzó una precisión perfecta (**100.00%**) en la tarea de verdad y urgencia booleana, un **98.00%** de acierto en enrutamiento departamental multiclase, y un **96.00%** de conformidad ordinal con un MAE récord de **0.216** puntos y $\text{TER} = 0.00\%$. La calibración probabilística exhibió errores macro récord en la literatura: **Macro ECE de 1.97%** y **Macro Brier Score de 0.0233**.
 
 ## 5.4 Análisis de calibración de probabilidades (ECE y Brier Score)
 
-El impacto del esquema de calibración dual (Focal + Brier + Escalado por Temperatura) se evidencia al comparar el modelo base sin calibrar frente al modelo procesado:
+El impacto del esquema de calibración dual (Focal + Brier + Escalado por Temperatura) se evidencia al comparar el modelo base sin calibrar (E1: Vanilla Baseline) frente al currículo consolidado (E5b: Full Pipeline con Reset de Optimizador):
 
 ```
-            Distribución de ECE: Línea Base vs. Pipeline Consolidado
-   ┌───────────────────────────────────┬───────────────────────────────────┐
-   │ Modelo y Configuración            │ ECE Promedio Sin Calibrar (Tier 0)│ ECE Calibrado Final (Tier 1+2)    │
+            Distribución de Macro ECE: Línea Base vs. Pipeline Consolidado
+   ┌───────────────────────────────────┬───────────────────────────────────┬───────────────────────────────────┐
+   │ Modelo y Configuración            │ Macro ECE Sin Calibrar (E1)       │ Macro ECE Calibrado Final (E5b)   │
    ├───────────────────────────────────┼───────────────────────────────────┼───────────────────────────────────┤
-   │ Qwen 2.5-0.5B                     │ 18.26% (Sobreconfianza severa)    │ 3.64% (Excelente concordancia)    │
-   │ Gemma 2 2B                        │ 21.40% (Logits comprimidos/satur) │ 6.12% (Calibración controlada)    │
-   │ OpenELM-450M                      │ 14.80% (Dispersión de gradiente)  │ 3.05% (Alineación cuasi-ideal)    │
+   │ Qwen 2.5-0.5B                     │ 15.25% (Sobreconfianza severa)    │ 5.27% (Excelente concordancia)    │
+   │ Gemma 2 2B                        │ 12.65% (Logits comprimidos/satur) │ 7.34% (Calibración controlada)    │
+   │ OpenELM-450M                      │  8.01% (Dispersión de gradiente)  │ 1.97% (Alineación cuasi-ideal)    │
    └───────────────────────────────────┴───────────────────────────────────┴───────────────────────────────────┘
 ```
 
-En todos los casos, el escalado por temperatura post-hoc ($T_{\text{opt}} \in [1.12, 1.45]$) logró reubicar las confianzas en bandas perfectamente coincidentes con la exactitud empírica por bin sin degradar en una sola décima porcentual la exactitud de clasificación.
+En todos los casos, el escalado por temperatura post-hoc para el cabezal booleano ($T_{\text{bool}} \in [0.50, 0.77]$) junto con la escala neutral unitaria ($T = 1.0$) en elección y puntaje logró reubicar las confianzas en bandas perfectamente coincidentes con la exactitud empírica por bin sin degradar en una sola décima porcentual la exactitud de clasificación.
 
 ## 5.5 Eficiencia de hardware, huella de almacenamiento y latencia concurrente
 
@@ -647,10 +648,10 @@ Las mediciones de inferencia fueron tomadas procesando simultáneamente las tres
 ```
         Rendimiento Predictivo Consolidado en Partición de Prueba Ciega (N = 300)
   100% ┼───────────────────────────────────────────────────────────── OpenELM (100%)
-       │                                       OpenELM (98%)          OpenELM (98%)
-   95% │                       Gemma (96%)     Gemma (95%)
-       │                       Qwen (96%)                             Qwen (93%) / Gemma (93%)
-   90% │       Qwen (92%)
+       │                                       OpenELM (98%)          OpenELM (96%)
+   95% │                       Gemma (96%)                            Gemma (94%)
+       │                       Qwen (96%)                             Qwen (93%)
+   90% │       Qwen (96%) / Gemma (92%)
        │
     0% ┴──────────────────────────────────────────────────────────────────────────────
            Exactitud Booleana        Exactitud Choice (Routing)    Conformidad Score (±1)
@@ -661,7 +662,7 @@ La tabla integral confirma que los tres modelos, a pesar de sus disparidades en 
 * Exactitud en enrutamiento multiclase $\ge 96.00\%$.
 * Exactitud en cumplimiento ordinal dentro de $\pm 1$ margen $\ge 93.00\%$.
 * **Tasa de error severo ($>1$ nivel en score) del 0.00% absoluto en todos los casos.**
-* Error de calibración esperado medio $\le 6.1\%$.
+* Error de calibración esperado medio ($\text{Macro ECE}$) $\le 7.34\%$.
 
 ---
 

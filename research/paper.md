@@ -145,7 +145,7 @@ In modern deep neural networks, classification accuracy does not imply well-cali
   ▼                                              ▼
 [Tier 1: Intrinsic Calibration]       [Tier 2: Extrinsic Calibration]
 In-Training Loss Shaping              Post-Hoc Temperature Scaling
-• Primitive-Specific Scoring Rules:   • Platt Scaling on Held-Out val.jsonl
+• Primitive-Specific Scoring Rules:   • Scalar Temperature Scaling on val.jsonl
   - bool: Focal + Brier (λ=0.5)       • Fits Scalar Temperature T in <50ms
   - choice: CE + Brier (λ=0.5)        • Preserves Argmax Accuracy (No Retraining)
   - score: Gaussian Ordinal (σ=0.35)  • Exported to calibration.json
@@ -163,9 +163,9 @@ In-Training Loss Shaping              Post-Hoc Temperature Scaling
    The **Brier Score** ($\frac{1}{C}\sum (p_c - y_c)^2$) is a *strictly proper scoring rule* (Gneiting & Raftery, 2007) that reaches its global minimum if and only if predicted probabilities match true conditional posterior probabilities, penalizing overconfidence directly during gradient updates.
 
 2. **Tier 2: Extrinsic Post-Hoc Recalibration (Temperature Scaling):**
-   Once the linear heads are trained and frozen, a secondary post-hoc calibration step evaluates the model on the held-out validation split (`val.jsonl`). A strictly positive temperature parameter $T \in \mathbb{R}^+$ is optimized via negative log-likelihood minimization:
+   Once the linear heads are trained and frozen, a secondary post-hoc calibration step evaluates the model on the held-out validation split (`val.jsonl`, $N=300$). A strictly positive scalar temperature parameter $T \in \mathbb{R}^+$ is optimized via a 150-step linear grid search ($T \in [0.5, 5.0]$) that directly minimizes the Expected Calibration Error ($\text{ECE}$ with 10 bins):
    $$\hat{p}_i = \text{Softmax}\left(\frac{z_i}{T}\right) \quad \text{or} \quad \sigma\left(\frac{z}{T}\right)$$
-   Because temperature scaling is a strictly monotonic transformation, it **strictly preserves the predicted class ordering (argmax)**, maintaining identical classification accuracy while aligning the confidence distribution with empirical error rates.
+   Because scalar temperature scaling lacks an additive bias term ($B=0$) and is strictly monotonic, it **strictly preserves the predicted class ordering (argmax)**, maintaining 100% of top-1 classification accuracy while aligning the confidence distribution with empirical error rates.
    
    **Domain Recalibration Advantage:** When deploying OpenJEV to a novel enterprise domain with distinct lexical characteristics (Out-of-Distribution / OOD), the system does **not** require retraining the backbone or heads. Practitioners can execute post-hoc temperature optimization on as few as 100–200 domain-specific calibration samples in **under 50 milliseconds**, reducing out-of-distribution Expected Calibration Error (ECE) from $18.26\%$ down to $3.34\%$.
 
@@ -182,9 +182,9 @@ During early iterations of the system, multiple critical failure modes emerged a
   produced:
   $$\text{is\_urgent} = 0 \quad (\text{with } P(\text{true}) = 0.189)$$
 * **Root Cause:** A generative LLM's final-token representation $h_Q$ contains rich semantic encodings, but the linear subspace separating "urgent" from "non-urgent" is not inherently aligned with arbitrary random projections. A random projection $W_{\text{bool}} h_Q$ produces arbitrary scalar logits centered around zero, rendering zero-shot inference purely stochastic.
-* **Correction:** Implemented Head-Only Tuning (Linear Probing) over the decision head parameters while keeping the foundation transformer backbone strictly frozen. To prevent overconfidence and enforce honest probabilistic bounds during optimization, the objective function couples binary cross-entropy with a Brier calibration penalty:
+* **Correction:** Implemented Head-Only Tuning (Linear Probing) over the decision head parameters while keeping the foundation transformer backbone strictly frozen. To prevent overconfidence and enforce honest probabilistic bounds during optimization, the initial objective function coupled binary cross-entropy with a Brier calibration penalty:
   $$\mathcal{L}_{\text{bool}} = \text{BCE}(p, y) + \lambda_{\text{calib}} (p - y)^2$$
-  where $\lambda_{\text{calib}} = 0.5$.
+  where $\lambda_{\text{calib}} = 0.5$. *(Note: In the final production curriculum detailed in §2.4.2 and §4.9.1, the base BCE term was subsequently upgraded to binary Focal Loss with $\gamma = 1.0$ to down-weight easy non-urgent examples and concentrate gradient updates on subtle decision boundaries).*
 
 ---
 
@@ -443,7 +443,7 @@ To ensure strict methodological validity and prevent data leakage, the multi-tas
 | Partition File | Sample Count | Proportion | Primitive Distribution | Methodological Role & Optimization Exposure |
 |---|---|---|---|---|
 | **`train.jsonl`** | **1,200** | **66.67%** | 400 Bool, 400 Choice, 400 Score | **Exclusive gradient optimization.** All parameter weights $\theta = \{W_{\text{bool}}, b_{\text{bool}}, W_{\text{choice}}, W_{\text{score}}, b_{\text{score}}\}$ were updated via AdamW backpropagation strictly on this partition. |
-| **`val.jsonl`** | **300** | **16.67%** | 100 Bool, 100 Choice, 100 Score | **Monitoring and post-hoc calibration only.** Never exposed to weight gradients. Used strictly to track loss/accuracy across epochs and to fit the post-hoc scalar temperature parameter $T_{\text{bool}}$ via Platt scaling. |
+| **`val.jsonl`** | **300** | **16.67%** | 100 Bool, 100 Choice, 100 Score | **Monitoring and post-hoc calibration only.** Never exposed to weight gradients. Used strictly to track loss/accuracy across epochs and to fit the post-hoc scalar temperature parameter $T_{\text{bool}}$ via grid-search Expected Calibration Error (ECE) minimization. |
 | **`test.jsonl`** | **300** | **16.67%** | 100 Bool, 100 Choice, 100 Score | **Blind held-out test evaluation.** Completely unexposed to training, optimization, hyperparameter tuning, or calibration. Evaluated only once after training completion to measure true out-of-sample generalization. |
 
 #### Empirical Data Leakage Audit and Decontamination
@@ -739,7 +739,7 @@ The OpenJEV training methodology decomposes decision head synthesis into three d
 │  [Phase 3: Extrinsic Post-Hoc Recalibration]                                           │
 │   • Temperature scaling (T > 0) fitted on independent validation partition (val.jsonl) │
 │   • Strictly monotonic transformation: preserves top-1 argmax and MAE                  │
-│   • Target: Fits T_bool via ECE/NLL grid search; choice and score default to T = 1.0   │
+│   • Target: Fits T_bool via ECE grid search in [0.5, 5.0]; choice/score default to 1.0 │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -764,7 +764,7 @@ The OpenJEV training methodology decomposes decision head synthesis into three d
 
 3. **Phase 3: Extrinsic Post-Hoc Recalibration (Temperature Scaling):**
    - **Objective:** Apply a single global scalar temperature parameter $T > 0$ to scale unnormalized logits ($z / T$) prior to softmax/sigmoid activation.
-   - **Fitting Protocol:** Optimized strictly on the isolated validation partition (`val.jsonl`, $N=300$) using grid search and Brent's scalar minimization to minimize Expected Calibration Error (ECE) and NLL.
+   - **Fitting Protocol:** Optimized strictly on the isolated validation partition (`val.jsonl`, $N=300$) using a 150-step uniform grid search over $T \in [0.5, 5.0]$ that directly minimizes the Expected Calibration Error ($\text{ECE}$, 10 bins). Choice and score primitives retain unit scaling ($T=1.0$), as their probability margins and metric distributions are already shaped intrinsically in Phase 2.
    - **Monotonicity Guarantee:** Because scalar temperature scaling is strictly monotonic, it preserves the relative ordering of candidate logits ($\arg\max_i z_i / T \equiv \arg\max_i z_i$). It cannot alter top-1 classification accuracy or expected value rankings, serving strictly as a global confidence dispersion tuner.
    - **Primitives:** Fits $T_{\text{bool}} \in (0.5, 0.7)$ for Boolean verification. For `choice` and `score`, where multi-candidate ranking and ordinal expectation are already shaped in Phase 2, temperature defaults to unit scaling ($T=1.0$).
 
