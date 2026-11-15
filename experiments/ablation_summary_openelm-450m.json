@@ -50,7 +50,7 @@
         "score_severe_misses_pct": 0.0
       }
     },
-    "time_seconds": 0.71,
+    "time_seconds": 0.8,
     "output_dir": "./experiments/run/TDS2_openelm-450m/E1"
   },
   {
@@ -104,7 +104,7 @@
         "score_severe_misses_pct": 0.0
       }
     },
-    "time_seconds": 0.7,
+    "time_seconds": 0.74,
     "output_dir": "./experiments/run/TDS2_openelm-450m/E2"
   },
   {
@@ -158,7 +158,7 @@
         "score_severe_misses_pct": 0.0
       }
     },
-    "time_seconds": 0.86,
+    "time_seconds": 0.85,
     "output_dir": "./experiments/run/TDS2_openelm-450m/E3"
   },
   {
@@ -212,7 +212,7 @@
         "score_severe_misses_pct": 0.0
       }
     },
-    "time_seconds": 1.0,
+    "time_seconds": 1.44,
     "output_dir": "./experiments/run/TDS2_openelm-450m/E4a"
   },
   {
@@ -266,7 +266,7 @@
         "score_severe_misses_pct": 0.0
       }
     },
-    "time_seconds": 0.96,
+    "time_seconds": 1.31,
     "output_dir": "./experiments/run/TDS2_openelm-450m/E4b"
   },
   {
@@ -320,7 +320,7 @@
         "score_severe_misses_pct": 0.0
       }
     },
-    "time_seconds": 1.02,
+    "time_seconds": 1.2,
     "output_dir": "./experiments/run/TDS2_openelm-450m/E5a"
   },
   {
@@ -374,7 +374,7 @@
         "score_severe_misses_pct": 0.0
       }
     },
-    "time_seconds": 1.12,
+    "time_seconds": 1.09,
     "output_dir": "./experiments/run/TDS2_openelm-450m/E5b"
   },
   {
@@ -428,7 +428,7 @@
         "score_severe_misses_pct": 0.0
       }
     },
-    "time_seconds": 0.7,
+    "time_seconds": 0.84,
     "output_dir": "./experiments/run/TDS2_openelm-450m/E6"
   }
 ]

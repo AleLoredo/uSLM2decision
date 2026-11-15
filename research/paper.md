@@ -145,16 +145,22 @@ In modern deep neural networks, classification accuracy does not imply well-cali
   ▼                                              ▼
 [Tier 1: Intrinsic Calibration]       [Tier 2: Extrinsic Calibration]
 In-Training Loss Shaping              Post-Hoc Temperature Scaling
-• Combined Focal + Brier Score        • Platt Scaling on Held-Out val.jsonl
-• Mathematically penalizes            • Fits Scalar Temperature T in <50ms
-  overconfident wrong predictions      • Preserves Argmax Accuracy (No Retraining)
-• Strictly Proper Scoring Rule        • Exported to calibration.json
+• Primitive-Specific Scoring Rules:   • Platt Scaling on Held-Out val.jsonl
+  - bool: Focal + Brier (λ=0.5)       • Fits Scalar Temperature T in <50ms
+  - choice: CE + Brier (λ=0.5)        • Preserves Argmax Accuracy (No Retraining)
+  - score: Gaussian Ordinal (σ=0.35)  • Exported to calibration.json
+• Strictly Proper Scoring Rules
 ```
 
 1. **Tier 1: Intrinsic In-Training Calibration (Loss Shaping):**
-   During backpropagation over head weights, standard cross-entropy is rejected because it encourages logits to diverge toward $\pm \infty$. Instead, OpenJEV employs a combined loss formulation coupling Focal Loss with Brier Score Regularization:
-   $$\mathcal{L} = \mathcal{L}_{\text{Focal}}(\gamma = 1.0) + \lambda \cdot \mathcal{L}_{\text{Brier}}(\lambda = 0.5)$$
-   The **Brier Score** ($\frac{1}{C}\sum (p_c - y_c)^2$) is a *strictly proper scoring rule* that reaches its global minimum if and only if the predicted probabilities match true conditional posterior probabilities, penalizing overconfidence directly during gradient updates.
+   During backpropagation over head weights in the curriculum refinement phase, standard unregularized cross-entropy is superseded by calibration loss formulations tailored to each decision primitive's mathematical manifold:
+   - **Boolean Verification (`noul`):** Couples binary Focal Loss ($\gamma = 1.0$) with quadratic Brier Score regularization to suppress easy negatives while penalizing overconfident classification errors:
+     $$\mathcal{L}_{\text{bool}} = \mathcal{L}_{\text{Focal}}(p, y; \gamma = 1.0) + \lambda_{\text{brier}} (p - y)^2 \quad (\lambda_{\text{brier}} = 0.5)$$
+   - **Multi-Option Semantic Routing (`choice`):** Couples categorical cross-entropy with a multiclass Brier score penalty over $\ell_2$-normalized contrastive projections:
+     $$\mathcal{L}_{\text{choice}} = \text{CE}(p, y) + \lambda_{\text{brier}} \sum_{c=1}^N (p_c - y_c)^2 \quad (\lambda_{\text{brier}} = 0.5)$$
+   - **Ordinal Discrete Scoring (`score`):** Applies cross-entropy against Gaussian-smoothed soft targets centered at the true rubric level $y$ with bandwidth $\sigma = 0.35$ using a stable log-softmax formulation ($z - \text{logsumexp}(z)$):
+     $$\mathcal{L}_{\text{score}} = -\sum_{i=0}^{M-1} \tilde{y}_i \log p_i, \quad \tilde{y}_i \propto \exp\left(-\frac{(i - y)^2}{2\sigma^2}\right)$$
+   The **Brier Score** ($\frac{1}{C}\sum (p_c - y_c)^2$) is a *strictly proper scoring rule* (Gneiting & Raftery, 2007) that reaches its global minimum if and only if predicted probabilities match true conditional posterior probabilities, penalizing overconfidence directly during gradient updates.
 
 2. **Tier 2: Extrinsic Post-Hoc Recalibration (Temperature Scaling):**
    Once the linear heads are trained and frozen, a secondary post-hoc calibration step evaluates the model on the held-out validation split (`val.jsonl`). A strictly positive temperature parameter $T \in \mathbb{R}^+$ is optimized via negative log-likelihood minimization:
@@ -295,7 +301,7 @@ During early iterations of the system, multiple critical failure modes emerged a
   Expanded the synthetic multi-task dataset generator to include balanced bilingual training data (English + Latin American / Rioplatense Spanish), incorporating regional slang, cancellations, and disputes:
   - Positives for billing/cancellation: `"Dene de baja de su servicio"`, `"Quiero dar de baja mi suscripción inmediatamente"`, `"Son unos ladrones y unos estafadores"`.
   - Negatives for billing/urgency: `"Hola, una consulta tranquila sobre los planes"`, `"Buenas tardes, ¿cómo descargo la factura?"`.
-  - Expanded total dataset from 1,200 to 1,800 examples partitioned into train (80%), validation (10%), and test (10%).
+  - Expanded total dataset to 1,800 examples partitioned into train (1200), validation (300), and test (300).
 
 ---
 
@@ -671,17 +677,19 @@ To test this hypothesis, we evaluated three structurally distinct LLM lineages u
 | **Layer Normalization** | Single pre-attention RMSNorm | Pre-attention RMSNorm | Dual pre- and post-feedforward RMSNorm | Varying internal normalization structures |
 | **Vocabulary Size** | 151,936 tokens | 32,000 tokens | 256,000 tokens | Distinct subword tokenization granularities |
 
-#### Empirical Results on Blind Held-Out Test Partition (`test.jsonl`):
+#### Empirical Results on Blind Held-Out Test Partition (`test.jsonl`, $N=300$):
 
-We evaluated all three backbones across the independent blind test partition (`test.jsonl`) under identical decision prompts:
+We evaluated all three backbones across the independent blind test partition (`test.jsonl`, 100 samples per primitive) under identical decision prompts and the optimal recommended curriculum ($E_{5b}$):
 
-| Decision Primitive | Metric | Qwen 2.5-0.5B ($d=896$) | OpenELM-450M ($d=1536$) | Gemma 2 2B ($d=2304$) | Universal Guarantee |
-|---|---|---|---|---|---|
-| **Noul (Boolean)** | Exact Match ($\text{noul} = y^*$) | **96.00%** | **90.00%** | **98.48%** | $\ge 90.00\%$ across all lineages |
-| **Choice (Routing)** | Exact Category Match ($\text{choice} = y^*$) | **96.00%** | **42.37%** | **84.85%** | Correct relative distribution |
-| **Score (Cont. MAE)** | Continuous Expected MAE ($|\bar{S} - y^*|$) | **0.389** | **0.482** | **0.412** | $< 0.50$ continuous MAE across all tiers |
-| **Score (Ordinal Bounds)** | Within $\pm 1$ Level ($|\Delta| \le 1$) | **93.00%** | **98.04%** | **100.00%** | **$\ge 93.00\%$ (Strict ordinal bounds)** |
-| **Score (Severe Errors)** | Severe Misses ($|\Delta| > 1.5$) | **0.00%** (0 / 100) | **0.00%** (0 / 51) | **0.00%** (0 / 48) | **0.00% across all 3 backbones** |
+| Decision Primitive | Evaluation Metric | Qwen 2.5-0.5B ($d=896$) | OpenELM-450M ($d=1536$) | Gemma 2 2B ($d=2304$) | Universal Guarantee |
+|---|---|:---:|:---:|:---:|:---:|
+| **Noul (Boolean)** | Exact Match ($\text{noul} = y^*$) | **96.00%** (96 / 100) | **100.00%** (100 / 100) | **92.00%** (92 / 100) | $\ge 92.00\%$ across all lineages |
+| **Choice (Routing)** | Exact Category Match ($\text{choice} = y^*$) | **96.00%** (96 / 100) | **98.00%** (98 / 100) | **96.00%** (96 / 100) | $\ge 96.00\%$ across all lineages |
+| **Score (Cont. MAE)** | Continuous Expected MAE ($|\bar{S} - y^*|$) | **0.389** | **0.216** | **0.383** | $< 0.40$ continuous MAE across all tiers |
+| **Score (Ordinal Bounds)** | Within $\pm 1$ Level ($|\Delta| \le 1$) | **93.00%** (93 / 100) | **98.00%** (98 / 100) | **93.00%** (93 / 100) | **$\ge 93.00\%$ (Strict ordinal bounds)** |
+| **Score (Severe Errors)** | Severe Misses ($|\Delta| > 1.5$) | **0.00%** (0 / 100) | **0.00%** (0 / 100) | **0.00%** (0 / 100) | **0.00% across all 3 backbones** |
+| **Calibration (Macro ECE)**| Expected Calibration Error (EW) | **5.27%** | **1.97%** | **7.34%** | $\le 7.34\%$ across all lineages |
+| **Calibration (Brier)** | Macro Brier Score | **0.0780** | **0.0233** | **0.1082** | Minimally dispersed probabilities |
 
 #### Measured In-Flight Inference Latency on Apple Silicon Metal GPU:
 
@@ -696,8 +704,8 @@ Concurrent evaluation of all three decision primitives (`noul` + `choice` + `sco
 #### Theoretical and Architectural Diagnostic Insights:
 1. **Universal Zero Severe Errors Guarantee:**
    Across all three model families—spanning homogeneous Llama-like, asymmetric layer-varying OpenELM, and Google's sliding-window Gemma 2—the score head achieved **0.00% severe errors** ($|\Delta| > 1.5$). This proves that our Gaussian-smoothed ordinal loss formulation enforces strict semantic monotonicity regardless of internal attention or FFN variations.
-2. **Latent Manifold Geometry in Bilinear Choice:**
-   While linear heads transferred seamlessly across all backbones, `choice` accuracy reflects latent manifold geometry: Qwen achieves $96.00\%$, Gemma achieves $84.85\%$, and OpenELM achieves $42.37\%$. In OpenELM, because earlier layers have fewer heads and lower FFN capacity, candidate option embeddings require higher-capacity projections to separate fine-grained intent boundaries, demonstrating that bilinear option heads benefit from dimension-scaled projection matrices $W_c \in \mathbb{R}^{d \times d}$.
+2. **Universality of Bilinear Multi-Option Routing Across Divergent Lineages:**
+   Under the calibrated curriculum ($E_{5b}$) with canonical sequence anchoring (`<s>` BOS), multi-option `choice` routing achieves $\ge 96.00\%$ across all three architectures, peaking at **$98.00\%$** on Apple's layer-varying OpenELM-450M. This empirically refutes the hypothesis that non-uniform architectures with constrained early attention heads inherently bottleneck semantic separation; rather, when early representations are properly anchored, bilinear candidate projections $W_{\text{choice}}$ effectively orient fine-grained category boundaries across diverse latent geometries ($d=896$ to $d=2304$).
 
 ---
 
@@ -721,7 +729,7 @@ The OpenJEV training methodology decomposes decision head synthesis into three d
 │                                     ▼                                                  │
 │  [Phase 2: Intrinsic Margin Refinement (Warm-Start Curriculum)]                        │
 │   • Warm-start from Phase 1 weights; refines margins via proper scoring rules          │
-│   • Loss: Focal + Brier regularization (bool/choice) & Gaussian ordinal loss (score)   │
+│   • Loss: Focal+Brier (bool), CE+Brier (choice), Gaussian soft-targets (score)        │
 │   • Epochs: 30 | Attenuated Learning Rate: η₂ = 2e-4                                   │
 │   • Optimizer State Management Modalities:                                             │
 │       - Modalidad A (reset): Re-initializes m_t = 0, v_t = 0 (prevents momentum shock)│
@@ -744,10 +752,10 @@ The OpenJEV training methodology decomposes decision head synthesis into three d
 
 2. **Phase 2: Intrinsic Margin Refinement (Warm-Start Curriculum):**
    - **Objective:** Refine the decision boundaries obtained from Phase 1 by reshaping probability margins through strictly proper scoring rules.
-   - **Loss Formulation:** Always applies intrinsic calibrated losses:
-     - `bool`: $\mathcal{L}_{\text{bool}} = \text{BCE}(p, y) + \lambda_{\text{brier}} (p - y)^2$ ($\lambda_{\text{brier}} = 0.5$).
-     - `choice`: $\mathcal{L}_{\text{choice}} = \text{CE}(p, y) + \lambda_{\text{brier}} \sum_{c=1}^N (p_c - y_c)^2$ ($\lambda_{\text{brier}} = 0.5$).
-     - `score`: Gaussian-smoothed soft-target cross-entropy ($\sigma = 0.35$).
+   - **Loss Formulation:** Always applies intrinsic calibrated losses tailored to each primitive:
+     - `bool`: $\mathcal{L}_{\text{bool}} = \mathcal{L}_{\text{Focal}}(p, y; \gamma = 1.0) + \lambda_{\text{brier}} (p - y)^2$ ($\lambda_{\text{brier}} = 0.5$).
+     - `choice`: $\mathcal{L}_{\text{choice}} = \text{CE}(p, y) + \lambda_{\text{brier}} \sum_{c=1}^N (p_c - y_c)^2$ ($\lambda_{\text{brier}} = 0.5$) applied over $\ell_2$-normalized contrastive projections ($z_i = \langle \hat{h}_{\text{proj}}, \hat{e}_i \rangle / \tau$).
+     - `score`: Gaussian-smoothed soft-target cross-entropy ($\sigma = 0.35$) using numerically stable log-softmax ($z_i - \text{logsumexp}(z)$).
    - **Optimization Hyperparameters:** 30 epochs with an attenuated learning rate $\eta_2 = 2 \times 10^{-4}$ ($5\times$ lower than Phase 1).
    - **The Momentum Shock Dilemma (Optimizer State Management):**
      When transitioning between Phase 1 and Phase 2, the loss function changes abruptly. AdamW maintains exponentially smoothed running estimates of the gradient first moment ($m_t = \beta_1 m_{t-1} + (1-\beta_1) g_t$) and second moment ($v_t = \beta_2 v_{t-1} + (1-\beta_2) g_t^2$). To determine whether momentum retention benefits or harms margin recalibration, Phase 2 is launched in two formal modalities:

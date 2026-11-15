@@ -476,11 +476,14 @@ $$h_{Q_k}(S, Q_k) \equiv h_{Q_k}(S, Q_1, \dots, Q_K), \quad \forall Q_{m \ne k}$
 
 ### 4. Estrategia de calibración en dos niveles (*Dual-Tier Calibration*)
 
-* **Tier 1 (Calibración Intrínseca en Entrenamiento):** Durante la optimización de los pesos de los cabezales, la función objetivo acopla *Focal Loss* con penalización de *Brier Score*:
-  $$\mathcal{L} = \mathcal{L}_{\text{Focal}}(\gamma = 1.0) + \lambda_{\text{calib}} \cdot \mathcal{L}_{\text{Brier}}$$
-  con $\lambda_{\text{calib}} = 0.5$. Para la primitiva ordinal, la etiqueta escalar $y \in \{0, \dots, M-1\}$ se suaviza con un kernel gaussiano analítico de ancho de banda óptimo $\sigma = 0.35$:
-  $$y_{\text{smooth}}(i) \propto \exp\left(-\frac{(i - y)^2}{2 \cdot 0.35^2}\right)$$
-  lo que preserva la fidelidad de los extremos sin diluir la masa en niveles adyacentes.
+* **Tier 1 (Calibración Intrínseca en Entrenamiento):** Durante la optimización de los cabezales en la fase de refinamiento, la función objetivo aplica formulaciones calibradas adaptadas a cada primitiva:
+  - **Para `bool` (`noul`):** Acopla *Focal Loss* con penalización cuadrática de *Brier Score*:
+    $$\mathcal{L}_{\text{bool}} = \mathcal{L}_{\text{Focal}}(p, y; \gamma = 1.0) + \lambda_{\text{calib}} (p - y)^2 \quad (\lambda_{\text{calib}} = 0.5)$$
+  - **Para `choice`:** Aplica entropía cruzada categórica junto con la penalización cuadrática de *Brier Score* sobre vectores $\ell_2$-normalizados con temperatura de contraste $\tau = 0.03$:
+    $$\mathcal{L}_{\text{choice}} = \text{CE}(p, y) + \lambda_{\text{calib}} \sum_{c=1}^N (p_c - y_c)^2 \quad (\lambda_{\text{calib}} = 0.5)$$
+  - **Para `score`:** Aplica entropía cruzada contra objetivos continuos suavizados mediante un kernel gaussiano analítico de ancho de banda óptimo $\sigma = 0.35$ con formulación log-softmax estable:
+    $$y_{\text{smooth}}(i) \propto \exp\left(-\frac{(i - y)^2}{2 \cdot 0.35^2}\right)$$
+    lo que preserva la fidelidad de los extremos sin diluir la masa en niveles adyacentes.
 
 * **Tier 2 (Calibración Extrínseca Post-Hoc):** Tras culminar el entrenamiento, se congelan los cabezales y se optimiza sobre `val.jsonl` un escalar estricto de temperatura $T \in \mathbb{R}^+$ mediante minimización de log-verosimilitud negativa:
   $$\hat{p}_i = \text{Softmax}\left(\frac{z_i}{T}\right)$$
